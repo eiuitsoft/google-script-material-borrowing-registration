@@ -1,0 +1,2006 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Đăng ký Trang thiết bị</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <?!= include('styles'); ?>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1 class="page-title">
+        PHIẾU ĐĂNG KÝ TRANG THIẾT BỊ THỰC HÀNH - KHOA ĐIỀU DƯỠNG
+      </h1>
+
+      <div id="msg"></div>
+
+      <div class="top-actions">
+        <button
+          id="btnToggleLoadForm"
+          class="btn btn-warning nowrap"
+        >
+          ✏️ Chỉnh sửa phiếu
+        </button>
+        <button
+          id="btnCollapseLoadForm"
+          class="btn btn-secondary nowrap hidden"
+        >
+          ▲ Thu gọn
+        </button>
+      </div>
+
+      <div
+        id="loadFormCard"
+        class="card load-form-card hidden"
+      >
+        <h3 class="load-form-title">
+          📋 Tải lại phiếu đăng ký để chỉnh sửa
+        </h3>
+        <div class="col-gap-12">
+          <div>
+            <label for="loadIdDexuat" class="label-note"
+              >Nhập ID phiếu đăng ký</label
+            >
+            <input
+              type="text"
+              id="loadIdDexuat"
+              placeholder="VD: NUR101-ABC123XYZ"
+              class="input-mt-4"
+            />
+            <div class="hint hint-note">
+              Nhập ID để tải lại và chỉnh sửa phiếu đã đăng ký
+            </div>
+          </div>
+          <button
+            id="btnLoadRegistration"
+            class="btn btn-warning w-full"
+          >
+            🔄 Tải lại phiếu
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-block">
+          <h3 class="section-title">
+            0. Thông tin đơn vị & kho xuất
+          </h3>
+          <div class="grid grid-2-col">
+            <div class="field-group">
+              <label for="donViCoSo" class="required">Đơn vị cơ sở</label>
+              <select id="donViCoSo" required>
+                <option value="">-- Chọn đơn vị --</option>
+              </select>
+              <div class="error-msg" id="err-donViCoSo">
+                Vui lòng chọn đơn vị cơ sở
+              </div>
+            </div>
+            <div class="field-group">
+              <label for="khoXuat" class="required">Kho xuất</label>
+              <select id="khoXuat" required>
+                <option value="">-- Chọn kho xuất --</option>
+              </select>
+              <div class="error-msg" id="err-khoXuat">
+                Vui lòng chọn kho xuất
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="section-block">
+          <h3 class="section-title">
+            1. Thông tin môn học
+          </h3>
+          <div class="grid grid-3-col">
+            <div class="field-group field-max-340 field-min-120">
+              <label for="ngayHoc" class="required">Ngày học</label>
+              <input
+                type="date"
+                id="ngayHoc"
+                required
+                class="w-min-0"
+              />
+              <div class="error-msg" id="err-ngayHoc">
+                Vui lòng chọn ngày học
+              </div>
+              <div class="hint">Ngày học thực hành</div>
+            </div>
+            <div class="field-group field-max-340">
+              <label class="required">Giờ học</label>
+              <div class="row-center-gap-8">
+                <select id="gioBatDau" required class="flex-1">
+                  <option value="">-- Bắt đầu --</option>
+                </select>
+                <span>-</span>
+                <select id="gioKetThuc" required class="flex-1">
+                  <option value="">-- Kết thúc --</option>
+                </select>
+              </div>
+              <div class="error-msg" id="err-gioHoc">
+                Vui lòng chọn giờ bắt đầu và kết thúc
+              </div>
+              <div class="hint">Khung giờ học</div>
+            </div>
+            <div class="field-group field-max-340">
+              <label for="hocKy" class="required">Học kỳ</label>
+              <input
+                type="text"
+                id="hocKy"
+                required
+                placeholder="VD: HK1 (2025-2026)"
+                class="w-full"
+              />
+              <div class="error-msg" id="err-hocKy">
+                Vui lòng nhập học kỳ đúng định dạng
+              </div>
+            </div>
+          </div>
+          <div class="grid grid-2-col mt-12">
+            <div class="field-group field-max-100">
+              <label for="maHocPhan" class="required">Mã môn học</label>
+              <select id="maHocPhan" required>
+                <option value="">-- Chọn mã môn học --</option>
+              </select>
+              <div class="error-msg" id="err-maHocPhan">
+                Vui lòng chọn mã môn học
+              </div>
+            </div>
+            <div class="field-group field-max-100">
+              <label for="hocPhan">Tên môn học</label>
+              <input type="text" id="hocPhan" readonly />
+              <div class="hint">Tự động điền khi chọn mã môn học</div>
+            </div>
+            <div class="spacer-340"></div>
+          </div>
+          <div class="grid grid-2-col mt-12">
+            <div class="field-group field-max-100">
+              <label for="loaiLab">Loại lab</label>
+              <input
+                list="dlLoaiLab"
+                id="loaiLab"
+                name="loaiLab"
+                autocomplete="off"
+                required
+              />
+              <datalist id="dlLoaiLab"></datalist>
+              <div class="hint">Tự động điền khi chọn mã môn học</div>
+            </div>
+            <div class="field-group field-max-100">
+              <label for="phongLab" class="required">Phòng/Lab</label>
+              <select id="phongLab" required>
+                <option value="">-- Chọn phòng --</option>
+              </select>
+              <div class="error-msg" id="err-phongLab">
+                Vui lòng chọn phòng/lab
+              </div>
+            </div>
+            <div class="spacer-340"></div>
+          </div>
+        </div>
+        <div class="section-block">
+          <h3 class="section-title">
+            2. Thông tin người đăng ký
+          </h3>
+          <div class="grid grid-3-col">
+            <div class="field-group field-max-340">
+              <label for="giangVien">Người đăng ký</label>
+              <input
+                type="text"
+                id="giangVien"
+                placeholder="Tên người đăng ký"
+                readonly
+              />
+              <div class="hint">Tự động điền từ hệ thống</div>
+            </div>
+            <div class="field-group field-max-340">
+              <label for="email">Email</label>
+              <input
+                type="email"
+                id="email"
+                placeholder="Email người đăng ký"
+                readonly
+              />
+              <div class="hint">Tự động điền từ hệ thống</div>
+            </div>
+            <div class="field-group field-max-340">
+              <label for="soDienThoai" class="required"
+                >Số điện thoại
+                <span class="tooltip" data-tip="Nhập 10 số điện thoại">ℹ️</span>
+              </label>
+              <input
+                type="tel"
+                id="soDienThoai"
+                placeholder="0123456789"
+                required
+                pattern="[0-9]{10}"
+                maxlength="10"
+              />
+              <div class="error-msg" id="err-soDienThoai">
+                Số điện thoại phải gồm 10 số
+              </div>
+              <div class="hint">10 chữ số</div>
+            </div>
+          </div>
+        </div>
+        <div class="section-block">
+          <h3 class="section-title">
+            3. Thông tin giảng viên phụ trách
+          </h3>
+          <div class="grid grid-2-col">
+            <div class="field-group field-max-100">
+              <label for="giangVienPhuTrach" class="required"
+                >Giảng viên phụ trách</label
+              >
+              <input
+                type="text"
+                id="giangVienPhuTrach"
+                required
+                placeholder="Nhập tên giảng viên phụ trách"
+                class="w-full"
+              />
+              <div class="error-msg" id="err-giangVienPhuTrach">
+                Vui lòng nhập tên giảng viên phụ trách
+              </div>
+            </div>
+            <div class="field-group field-max-100">
+              <label for="emailGiangVienPhuTrach" class="required"
+                >Email Giảng viên phụ trách</label
+              >
+              <input
+                type="email"
+                id="emailGiangVienPhuTrach"
+                required
+                placeholder="name@eiu.edu.vn"
+                class="w-full"
+              />
+              <div class="error-msg" id="err-emailGiangVienPhuTrach">
+                Email phải có đuôi @eiu.edu.vn
+              </div>
+              <div class="hint">
+                Tự động điền email đăng nhập hoặc nhập email khác (@eiu.edu.vn)
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="section-block">
+          <h3 class="section-title">
+            4. Thông tin nhận thiết bị
+          </h3>
+          <div class="grid grid-2-col">
+            <div class="field-group">
+              <label for="ngayNhan" class="required">Ngày nhận</label>
+              <input
+                type="date"
+                id="ngayNhan"
+                required
+                class="w-min-0"
+              />
+              <div class="hint">Ngày dự kiến nhận thiết bị</div>
+              <div class="error-msg" id="err-ngayNhan">
+                "Ngày nhận" phải bằng hoặc trước "Ngày học"
+              </div>
+            </div>
+            <div class="field-group">
+              <label for="gioNhan" class="required">Giờ nhận</label>
+              <select id="gioNhan" name="gioNhan" required>
+                <option value="">-- Chọn giờ --</option>
+                <option value="09:00">09:00</option>
+                <option value="16:00">16:00</option>
+              </select>
+              <div class="hint">Giờ dự kiến nhận thiết bị</div>
+              <div class="error-msg" id="err-gioNhan">
+                Vui lòng chọn giờ nhận
+              </div>
+            </div>
+          </div>
+          <div class="grid grid-3-col mt-12">
+            <div class="field-group">
+              <label for="ngayTra" class="required">Ngày trả</label>
+              <input
+                type="date"
+                id="ngayTra"
+                required
+                class="w-min-0"
+              />
+              <div class="hint">Ngày dự kiến trả thiết bị</div>
+              <div class="error-msg" id="err-ngayTra">
+                "Ngày trả" phải sau hoặc bằng "Ngày nhận"
+              </div>
+            </div>
+            <div class="field-group">
+              <label for="gioTra" class="required">Giờ trả</label>
+              <select id="gioTra" name="gioTra" required>
+                <option value="">-- Chọn giờ --</option>
+                <option value="09:00">09:00</option>
+                <option value="16:00">16:00</option>
+              </select>
+              <div class="hint">Giờ dự kiến trả thiết bị</div>
+              <div class="error-msg" id="err-gioTra">Vui lòng chọn giờ trả</div>
+            </div>
+            <div class="field-group">
+              <label for="soKyNang" class="required"
+                >Số lượng kỹ năng/bài thực hành</label
+              >
+              <select id="soKyNang" required class="w-full">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+              <div class="hint">
+                Chọn số lượng kỹ năng/bài thực hành cần đăng ký
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="field-group hidden">
+          <label for="ts">Thời gian gửi</label>
+          <input type="text" id="ts" readonly placeholder="Tự tạo khi gửi" />
+          <div class="hint">Được tạo tự động khi gửi</div>
+        </div>
+      </div>
+
+      <div class="table-action-wrap">
+        <button id="btnAddTable" class="btn">+ Tạo bảng thiết bị</button>
+      </div>
+      <div id="kyNangTables"></div>
+
+      <div id="submitToolbar" class="submit-toolbar hidden">
+        <div class="toolbar">
+          <button id="btnReset">Xóa trắng</button>
+          <button class="btn" id="btnSubmit">Gửi đăng ký</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const START_ROWS = 3;
+      const LOOKUPS = {
+        tenTB: [],
+        tenThuongMai: [],
+        loai: [],
+        nuocSX: [],
+        hang: [],
+        ncc: [],
+        dvt: [],
+        phong: [],
+        loaiPLab: [],
+        loaiMonHoc: [],
+        giangVien: [],
+      };
+      const COURSES = [];
+      let DANH_MUC_DATA = []; // Dữ liệu chi tiết từ sheet Danh mục
+      let USER_INFO = {}; // Thông tin user từ sheet Nhân sự
+      let IS_SUBMITTING = false; // Prevent double submit
+      let CACHED_DATALISTS = {}; // Cache cho datalists (dùng let vì cần reset)
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const userEmail = "<?= userEmail ?>";
+        document.getElementById("email").value = userEmail;
+        // Gợi ý học kỳ
+        document.getElementById("hocKy").value = suggestHocKy();
+        // Gợi ý học kỳ theo tháng/năm hiện tại
+        function suggestHocKy() {
+          const now = new Date();
+          return suggestHocKyFromDate(now.toISOString().split("T")[0]);
+        }
+
+        // Gợi ý học kỳ dựa vào ngày được chọn
+        function suggestHocKyFromDate(dateStr) {
+          const date = new Date(dateStr);
+          const month = date.getMonth() + 1;
+          let hk = "";
+          if (month >= 10 && month <= 12) hk = "HK1";
+          else if (month >= 1 && month <= 3) hk = "HK2";
+          else if (month >= 4 && month <= 6) hk = "HK3";
+          else if (month >= 7 && month <= 9) hk = "HK4";
+          let year = date.getFullYear();
+          let nextYear = year + 1;
+          // Nếu tháng >= 10 thì năm học là năm hiện tại - năm sau
+          // Nếu tháng < 10 thì năm học là năm trước - năm hiện tại
+          let namHoc = "";
+          if (month >= 10) namHoc = `${year}-${nextYear}`;
+          else namHoc = `${year - 1}-${year}`;
+          return `${hk} (${namHoc})`;
+        }
+
+        // Utility: Debounce function
+        function debounce(func, wait) {
+          let timeout;
+          return function executedFunction(...args) {
+            const later = () => {
+              clearTimeout(timeout);
+              func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+          };
+        }
+
+        // Utility: Validate email format
+        function isValidEmail(email) {
+          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        // Set min date for 'ngayHoc' and 'ngayNhan' to today
+        const todayStr = new Date().toISOString().split("T")[0];
+        const ngayHocInput = document.getElementById("ngayHoc");
+        if (ngayHocInput) ngayHocInput.min = todayStr;
+        const ngayNhanInput = document.getElementById("ngayNhan");
+        if (ngayNhanInput) ngayNhanInput.min = todayStr;
+
+        // When 'ngayHoc' changes, restrict 'ngayNhan' max and update hocKy
+        const ngayTraInput = document.getElementById("ngayTra");
+        const gioNhanInput = document.getElementById("gioNhan");
+        const gioTraInput = document.getElementById("gioTra");
+        if (ngayHocInput && ngayNhanInput && ngayTraInput) {
+          ngayHocInput.addEventListener("change", () => {
+            ngayNhanInput.max = ngayHocInput.value || "";
+            // Cập nhật học kỳ dựa vào ngày học
+            if (ngayHocInput.value) {
+              document.getElementById("hocKy").value = suggestHocKyFromDate(
+                ngayHocInput.value,
+              );
+            }
+            if (ngayNhanInput.value) {
+              ngayTraInput.min = ngayNhanInput.value;
+            }
+          });
+          ngayNhanInput.addEventListener("change", () => {
+            if (ngayNhanInput.value) {
+              ngayTraInput.min = ngayNhanInput.value;
+            }
+          });
+        }
+
+        populateTimeSelects(); // Populate all time dropdowns (gioBatDau, gioKetThuc, gioNhan, gioTra)
+
+        // merge LOOKUPS from server
+        google.script.run
+          .withSuccessHandler((data) => {
+            Object.assign(LOOKUPS, data || {});
+            DANH_MUC_DATA = data.danhMucData || [];
+            USER_INFO = data.userInfo || {};
+
+            // Đổ dữ liệu Đơn vị cơ sở
+            const donViSelect = document.getElementById("donViCoSo");
+            (data.donViCoSo || []).forEach((dv) => {
+              const opt = document.createElement("option");
+              opt.value = dv.code;
+              opt.textContent = `${dv.code} - ${dv.name}`;
+              donViSelect.appendChild(opt);
+            });
+
+            // Đổ dữ liệu Kho xuất
+            const khoSelect = document.getElementById("khoXuat");
+            (data.kho || []).forEach((k) => {
+              const opt = document.createElement("option");
+              opt.value = k.code;
+              opt.textContent = `${k.code} - ${k.name}`;
+              khoSelect.appendChild(opt);
+            });
+
+            // Reset cache để force rebuild datalists với dữ liệu mới
+            CACHED_DATALISTS = {
+              tenTB: null,
+              tenThuongMai: null,
+              loai: null,
+              nuocSX: null,
+              hang: null,
+              ncc: null,
+              dvt: null,
+              loaiMonHoc: null,
+              maMonHoc: null,
+              tenMonHoc: null,
+              phong: null,
+              kyThuat: null,
+            };
+
+            // Log USER_INFO để debug
+            console.log("✅ USER_INFO loaded:", USER_INFO);
+
+            // Lấy cài đặt admin để áp dụng ẩn/bắt buộc cho các trường
+            google.script.run
+              .withSuccessHandler((settings) => {
+                window.FORM_SETTINGS = settings || {};
+                applyFormSettings(window.FORM_SETTINGS);
+              })
+              .getAdminSettings();
+
+            buildDatalists();
+            console.log(
+              "✅ Datalists built with",
+              DANH_MUC_DATA.length,
+              "items",
+            );
+            // KHÔNG gọi initTable() ở đây - chỉ gọi khi bấm nút "Tạo bảng thiết bị"
+
+            // Tự động điền thông tin user
+            if (USER_INFO.hoTen) {
+              document.getElementById("giangVien").value = USER_INFO.hoTen;
+              document.getElementById("giangVienPhuTrach").value =
+                USER_INFO.hoTen;
+            }
+            if (USER_INFO.sdt) {
+              document.getElementById("soDienThoai").value = USER_INFO.sdt;
+            }
+            if (USER_INFO.email) {
+              document.getElementById("emailGiangVienPhuTrach").value =
+                USER_INFO.email;
+            }
+            console.log("✅ Auto-filled user info from session");
+          })
+          .getLookupsForClient();
+
+        // fetch courses from server and populate selects
+        google.script.run
+          .withSuccessHandler((list) => {
+            if (!Array.isArray(list) || !list.length) return;
+            COURSES.push(...list);
+            const ma = document.getElementById("maHocPhan");
+
+            // fill ma select with unique codes
+            const uniqueCodes = [...new Set(list.map((c) => c.code))].sort();
+            uniqueCodes.forEach((code) => {
+              const opt = document.createElement("option");
+              opt.value = code;
+              opt.textContent = code;
+              ma.appendChild(opt);
+            });
+
+            // Hàm xử lý khi chọn mã học phần
+            const handleMaHocPhanChange = () => {
+              const code = ma.value;
+              const found = DANH_MUC_DATA.find((x) => x.maMonHoc === code);
+              if (found) {
+                // Ô 11: Tên môn học - tự động điền
+                document.getElementById("hocPhan").value =
+                  found.tenMonHoc || "";
+
+                // Ô 12: Loại lab - tự động điền từ cột I (loaiMonHoc)
+                const loaiLabInput = document.getElementById("loaiLab");
+                const loaiLabValue = found.loaiMonHoc || "";
+                loaiLabInput.value = loaiLabValue;
+                loaiLabInput.readOnly = true;
+
+                // Ô 13: Phòng/Lab - dùng giá trị trong ô "Loại lab" để so sánh với cột L
+                // Tìm những dòng có cột L (loaiLab) trùng với giá trị "Loại lab"
+                // Rồi lấy phòng từ cột M
+                updatePhongDropdown(loaiLabValue);
+
+                // Auto-fill Phòng/Lab nếu chỉ có 1 lựa chọn
+                // Delay nhỏ để đảm bảo dropdown đã được cập nhật
+                setTimeout(() => {
+                  const phongSelect = document.getElementById("phongLab");
+                  if (phongSelect.options.length === 2) {
+                    // 1 option mặc định + 1 option thực
+                    phongSelect.selectedIndex = 1;
+                    // Trigger change event để mobile nhận biết
+                    phongSelect.dispatchEvent(
+                      new Event("change", { bubbles: true }),
+                    );
+                  }
+                }, 100);
+              } else {
+                document.getElementById("hocPhan").value = "";
+                const loaiLabInput = document.getElementById("loaiLab");
+                loaiLabInput.value = "";
+                loaiLabInput.readOnly = false;
+                updatePhongDropdown("");
+              }
+            };
+
+            // Khi chọn mã học phần - sử dụng cả 'change' và 'input' để tương thích mobile
+            ma.addEventListener("change", handleMaHocPhanChange);
+            ma.addEventListener("input", handleMaHocPhanChange);
+          })
+          .getCourses();
+
+        document
+          .getElementById("btnAddTable")
+          .addEventListener("click", (e) => {
+            e.preventDefault();
+            initTable();
+            document.getElementById("submitToolbar").style.display = "block";
+            // Refresh datalists sau khi tạo bảng
+            refreshAllDatalists();
+          });
+        document.getElementById("btnReset").addEventListener("click", (e) => {
+          e.preventDefault();
+          resetForm();
+        });
+        document.getElementById("btnSubmit").addEventListener("click", (e) => {
+          e.preventDefault();
+          submitForm();
+        });
+        document
+          .getElementById("btnLoadRegistration")
+          .addEventListener("click", (e) => {
+            e.preventDefault();
+            loadRegistrationById();
+          });
+
+        // Toggle load form (expand/collapse)
+        document
+          .getElementById("btnToggleLoadForm")
+          .addEventListener("click", (e) => {
+            e.preventDefault();
+            const card = document.getElementById("loadFormCard");
+            const toggleBtn = document.getElementById("btnToggleLoadForm");
+            const collapseBtn = document.getElementById("btnCollapseLoadForm");
+
+            card.style.display = "block";
+            toggleBtn.innerHTML = "🔄 Tải lại phiếu";
+            collapseBtn.style.display = "inline-block";
+          });
+
+        // Collapse load form
+        document
+          .getElementById("btnCollapseLoadForm")
+          .addEventListener("click", (e) => {
+            e.preventDefault();
+            const card = document.getElementById("loadFormCard");
+            const toggleBtn = document.getElementById("btnToggleLoadForm");
+            const collapseBtn = document.getElementById("btnCollapseLoadForm");
+
+            card.style.display = "none";
+            toggleBtn.innerHTML = "✏️ Chỉnh sửa phiếu";
+            collapseBtn.style.display = "none";
+          });
+      });
+
+      // Áp dụng cài đặt form: ẩn hoặc đánh dấu bắt buộc cho các trường
+      function applyFormSettings(settings) {
+        const hidden = (settings.hiddenFields || "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const required = (settings.requiredFields || "")
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        const hideField = (fieldId) => {
+          const el = document.getElementById(fieldId);
+          if (!el) return;
+          const group = el.closest(".field-group");
+          if (group) group.style.display = "none";
+        };
+
+        const requireField = (fieldId) => {
+          const el = document.getElementById(fieldId);
+          const label = document.querySelector(`label[for="${fieldId}"]`);
+          if (el) el.required = true;
+          if (label) label.classList.add("required");
+        };
+
+        hidden.forEach((id) => hideField(id));
+        required.forEach((id) => requireField(id));
+      }
+
+      function updatePhongDropdown(loaiLabValue) {
+        const phongSelect = document.getElementById("phongLab");
+        phongSelect.innerHTML = '<option value="">-- Chọn phòng --</option>';
+
+        if (!loaiLabValue) return;
+
+        // Dùng giá trị trong ô "Loại lab" để so sánh với cột L (loaiLab)
+        // Rồi lấy phòng từ cột M của những dòng có cùng giá trị
+        const phongOptions = DANH_MUC_DATA.filter(
+          (x) => x.loaiLab === loaiLabValue && x.phong,
+        ).map((x) => x.phong);
+
+        const uniquePhong = [...new Set(phongOptions)].sort();
+        uniquePhong.forEach((phong) => {
+          const opt = document.createElement("option");
+          opt.value = phong;
+          opt.textContent = phong;
+          phongSelect.appendChild(opt);
+        });
+      }
+
+      function msgOk(s) {
+        document.getElementById("msg").innerHTML = `<div class="ok">${s}</div>`;
+      }
+      function msgErr(s) {
+        document.getElementById("msg").innerHTML =
+          `<div class="err">${s}</div>`;
+      }
+      function clearMsg() {
+        document.getElementById("msg").innerHTML = "";
+      }
+
+      function populateTimeSelects() {
+        const startSelect = document.getElementById("gioBatDau");
+        const endSelect = document.getElementById("gioKetThuc");
+
+        const startTimeBegin = 7 * 60 + 30; // 7:30 in minutes
+        const startTimeEnd = 17 * 60 + 30; // 17:30 in minutes
+        const endTimeBegin = 9 * 60 + 30; // 9:30 in minutes
+        const endTimeEnd = 19 * 60 + 30; // 19:30 in minutes
+        const interval = 30; // 30 minutes
+
+        // Populate Giờ bắt đầu: 07:30 -> 17:30
+        for (
+          let minutes = startTimeBegin;
+          minutes <= startTimeEnd;
+          minutes += interval
+        ) {
+          const hour = Math.floor(minutes / 60);
+          const minute = minutes % 60;
+          const timeString = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+
+          const startOption = document.createElement("option");
+          startOption.value = timeString;
+          startOption.textContent = timeString;
+          startSelect.appendChild(startOption);
+        }
+
+        // Populate Giờ kết thúc: 09:30 -> 19:30
+        for (
+          let minutes = endTimeBegin;
+          minutes <= endTimeEnd;
+          minutes += interval
+        ) {
+          const hour = Math.floor(minutes / 60);
+          const minute = minutes % 60;
+          const timeString = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+
+          const endOption = document.createElement("option");
+          endOption.value = timeString;
+          endOption.textContent = timeString;
+          endSelect.appendChild(endOption);
+        }
+        // gioNhan và gioTra giữ nguyên 2 options hardcode trong HTML (09:00 và 16:00)
+      }
+
+      function buildDatalists() {
+        // Tạo datalist cho autocomplete với cache
+
+        // Cache unique values nếu chưa có
+        if (!CACHED_DATALISTS.tenTB) {
+          CACHED_DATALISTS.tenTB = [
+            ...new Set(DANH_MUC_DATA.map((x) => x.tenTB || "").filter(Boolean)),
+          ].sort();
+          CACHED_DATALISTS.tenThuongMai = [
+            ...new Set(
+              DANH_MUC_DATA.map((x) => x.tenThuongMai || "").filter(Boolean),
+            ),
+          ].sort();
+          CACHED_DATALISTS.loai = [
+            ...new Set(DANH_MUC_DATA.map((x) => x.loai || "").filter(Boolean)),
+          ].sort();
+          CACHED_DATALISTS.nuocSX = [
+            ...new Set(
+              DANH_MUC_DATA.map((x) => x.nuocSX || "").filter(Boolean),
+            ),
+          ].sort();
+          CACHED_DATALISTS.hang = [
+            ...new Set(DANH_MUC_DATA.map((x) => x.hang || "").filter(Boolean)),
+          ].sort();
+          CACHED_DATALISTS.ncc = [
+            ...new Set(DANH_MUC_DATA.map((x) => x.ncc || "").filter(Boolean)),
+          ].sort();
+          CACHED_DATALISTS.dvt = [
+            ...new Set(DANH_MUC_DATA.map((x) => x.dvt || "").filter(Boolean)),
+          ].sort();
+          CACHED_DATALISTS.loaiMonHoc = [
+            ...new Set(
+              DANH_MUC_DATA.map((x) => x.loaiMonHoc || "").filter(Boolean),
+            ),
+          ].sort();
+          CACHED_DATALISTS.maMonHoc = [
+            ...new Set(
+              DANH_MUC_DATA.map((x) => x.maMonHoc || "").filter(Boolean),
+            ),
+          ].sort();
+          CACHED_DATALISTS.tenMonHoc = [
+            ...new Set(
+              DANH_MUC_DATA.map((x) => x.tenMonHoc || "").filter(Boolean),
+            ),
+          ].sort();
+          CACHED_DATALISTS.phong = [
+            ...new Set(DANH_MUC_DATA.map((x) => x.phong || "").filter(Boolean)),
+          ].sort();
+          CACHED_DATALISTS.kyThuat = [
+            ...new Set(
+              DANH_MUC_DATA.map((x) => x.kyThuat || "").filter(Boolean),
+            ),
+          ].sort();
+          console.log("✅ Built datalist cache:", {
+            tenTB: CACHED_DATALISTS.tenTB.length,
+            tenThuongMai: CACHED_DATALISTS.tenThuongMai.length,
+            loai: CACHED_DATALISTS.loai.length,
+            nuocSX: CACHED_DATALISTS.nuocSX.length,
+            hang: CACHED_DATALISTS.hang.length,
+            ncc: CACHED_DATALISTS.ncc.length,
+            dvt: CACHED_DATALISTS.dvt.length,
+            loaiMonHoc: CACHED_DATALISTS.loaiMonHoc.length,
+            maMonHoc: CACHED_DATALISTS.maMonHoc.length,
+            tenMonHoc: CACHED_DATALISTS.tenMonHoc.length,
+            phong: CACHED_DATALISTS.phong.length,
+            kyThuat: CACHED_DATALISTS.kyThuat.length,
+          });
+        }
+
+        let dlTenTB = document.getElementById("dlTenTB");
+        if (!dlTenTB) {
+          dlTenTB = document.createElement("datalist");
+          dlTenTB.id = "dlTenTB";
+          document.body.appendChild(dlTenTB);
+        }
+        // Tên thiết bị: cột B
+        dlTenTB.innerHTML = CACHED_DATALISTS.tenTB
+          .map((v) => `<option value="${escapeHtml(v)}">`)
+          .join("");
+        // Tên thương mại: cột C
+        let dlTenThuongMai = document.getElementById("dlTenThuongMai");
+        if (!dlTenThuongMai) {
+          dlTenThuongMai = document.createElement("datalist");
+          dlTenThuongMai.id = "dlTenThuongMai";
+          document.body.appendChild(dlTenThuongMai);
+        }
+        dlTenThuongMai.innerHTML = CACHED_DATALISTS.tenThuongMai
+          .map((v) => `<option value="${escapeHtml(v)}">`)
+          .join("");
+        // Loại: cột D
+        let dlLoai = document.getElementById("dlLoai");
+        if (!dlLoai) {
+          dlLoai = document.createElement("datalist");
+          dlLoai.id = "dlLoai";
+          document.body.appendChild(dlLoai);
+        }
+        dlLoai.innerHTML = CACHED_DATALISTS.loai
+          .map((v) => `<option value="${escapeHtml(v)}">`)
+          .join("");
+        // Nước SX: cột E
+        let dlNuocSX = document.getElementById("dlNuocSX");
+        if (!dlNuocSX) {
+          dlNuocSX = document.createElement("datalist");
+          dlNuocSX.id = "dlNuocSX";
+          document.body.appendChild(dlNuocSX);
+        }
+        dlNuocSX.innerHTML = CACHED_DATALISTS.nuocSX
+          .map((v) => `<option value="${escapeHtml(v)}">`)
+          .join("");
+        // Hãng: cột F
+        let dlHang = document.getElementById("dlHang");
+        if (!dlHang) {
+          dlHang = document.createElement("datalist");
+          dlHang.id = "dlHang";
+          document.body.appendChild(dlHang);
+        }
+        dlHang.innerHTML = CACHED_DATALISTS.hang
+          .map((v) => `<option value="${escapeHtml(v)}">`)
+          .join("");
+        // NCC: cột G
+        let dlNCC = document.getElementById("dlNCC");
+        if (!dlNCC) {
+          dlNCC = document.createElement("datalist");
+          dlNCC.id = "dlNCC";
+          document.body.appendChild(dlNCC);
+        }
+        dlNCC.innerHTML = CACHED_DATALISTS.ncc
+          .map((v) => `<option value="${escapeHtml(v)}">`)
+          .join("");
+        // ĐVT: cột H
+        let dlDVT = document.getElementById("dlDVT");
+        if (!dlDVT) {
+          dlDVT = document.createElement("datalist");
+          dlDVT.id = "dlDVT";
+          document.body.appendChild(dlDVT);
+        }
+        dlDVT.innerHTML = CACHED_DATALISTS.dvt
+          .map((v) => `<option value="${escapeHtml(v)}">`)
+          .join("");
+        // Loại môn học: cột I
+        let dlLoaiMonHoc = document.getElementById("dlLoaiMonHoc");
+        if (!dlLoaiMonHoc) {
+          dlLoaiMonHoc = document.createElement("datalist");
+          dlLoaiMonHoc.id = "dlLoaiMonHoc";
+          document.body.appendChild(dlLoaiMonHoc);
+        }
+        dlLoaiMonHoc.innerHTML = CACHED_DATALISTS.loaiMonHoc
+          .map((v) => `<option value="${escapeHtml(v)}">`)
+          .join("");
+        // Mã môn học: cột J
+        let dlMaMonHoc = document.getElementById("dlMaMonHoc");
+        if (!dlMaMonHoc) {
+          dlMaMonHoc = document.createElement("datalist");
+          dlMaMonHoc.id = "dlMaMonHoc";
+          document.body.appendChild(dlMaMonHoc);
+        }
+        dlMaMonHoc.innerHTML = CACHED_DATALISTS.maMonHoc
+          .map((v) => `<option value="${escapeHtml(v)}">`)
+          .join("");
+        // Tên môn học: cột K
+        let dlTenMonHoc = document.getElementById("dlTenMonHoc");
+        if (!dlTenMonHoc) {
+          dlTenMonHoc = document.createElement("datalist");
+          dlTenMonHoc.id = "dlTenMonHoc";
+          document.body.appendChild(dlTenMonHoc);
+        }
+        dlTenMonHoc.innerHTML = CACHED_DATALISTS.tenMonHoc
+          .map((v) => `<option value="${escapeHtml(v)}">`)
+          .join("");
+        // Loại lab: cột I
+        let dlLoaiLab = document.getElementById("dlLoaiLab");
+        if (!dlLoaiLab) {
+          dlLoaiLab = document.createElement("datalist");
+          dlLoaiLab.id = "dlLoaiLab";
+          document.body.appendChild(dlLoaiLab);
+        }
+        dlLoaiLab.innerHTML = CACHED_DATALISTS.loaiMonHoc
+          .map((v) => `<option value="${escapeHtml(v)}">`)
+          .join("");
+        // Phòng: cột M
+        let dlPhong = document.getElementById("dlPhong");
+        if (!dlPhong) {
+          dlPhong = document.createElement("datalist");
+          dlPhong.id = "dlPhong";
+          document.body.appendChild(dlPhong);
+        }
+        dlPhong.innerHTML = CACHED_DATALISTS.phong
+          .map((v) => `<option value="${escapeHtml(v)}">`)
+          .join("");
+        // Tên kỹ thuật/Bài thí nghiệm
+        let dlKyThuat = document.getElementById("dlKyThuat");
+        if (!dlKyThuat) {
+          dlKyThuat = document.createElement("datalist");
+          dlKyThuat.id = "dlKyThuat";
+          document.body.appendChild(dlKyThuat);
+        }
+        dlKyThuat.innerHTML = CACHED_DATALISTS.kyThuat
+          .map((v) => `<option value="${escapeHtml(v)}">`)
+          .join("");
+      }
+
+      function initTable() {
+        // Lưu dữ liệu các bảng kỹ năng
+        if (!window.kyNangData) window.kyNangData = [];
+        const kyNangTables = document.getElementById("kyNangTables");
+        const soKyNang = Number(document.getElementById("soKyNang").value) || 1;
+
+        // Lưu dữ liệu hiện tại của các bảng đang có trước khi xóa HTML
+        const currentKyNangCount = window.kyNangData.length;
+        for (let k = 0; k < currentKyNangCount; k++) {
+          const kyThuatInput = document.getElementById(`kyThuat${k}`);
+          if (kyThuatInput) {
+            window.kyNangData[k].kyThuat = kyThuatInput.value;
+          }
+          const tbody = document.getElementById(`tbody${k}`);
+          if (tbody) {
+            saveTableData(k);
+          }
+        }
+
+        // Giữ dữ liệu cũ và điều chỉnh số lượng
+        if (!window.kyNangData.length) {
+          window.kyNangData = Array(soKyNang)
+            .fill()
+            .map(() => ({ kyThuat: "", rows: [] }));
+        } else if (window.kyNangData.length < soKyNang) {
+          while (window.kyNangData.length < soKyNang)
+            window.kyNangData.push({ kyThuat: "", rows: [] });
+        } else if (window.kyNangData.length > soKyNang) {
+          window.kyNangData = window.kyNangData.slice(0, soKyNang);
+        }
+        kyNangTables.innerHTML = "";
+        // Luôn hiện nút tạo bảng ở trên các bảng (giữ inline-block để không bị nhảy)
+        document.getElementById("btnAddTable").style.display = "inline-block";
+        // Hiện toolbar khi có bảng
+        document.getElementById("submitToolbar").style.display =
+          soKyNang > 0 ? "block" : "none";
+        for (let k = 0; k < soKyNang; k++) {
+          const tableWrap = document.createElement("div");
+          tableWrap.className = "table-wrap";
+          tableWrap.innerHTML = `
+          <div class="kn-head-row">
+            <b>Kỹ năng/Bài thực hành #${k + 1}</b>
+            <button class="btn btn-danger" id="btnDelTable${k}">X</button>
+          </div>
+          <div class="kn-meta-row">
+            <div class="flex-1">
+              <label for="kyThuat${k}" class="required">Tên kỹ thuật/Bài thí nghiệm</label>
+              <input class="kyThuat" id="kyThuat${k}" list="dlKyThuat" required placeholder="Tên kỹ thuật/Bài thí nghiệm" value="${window.kyNangData[k]?.kyThuat || ""}">
+            </div>
+            <span class="pill row-count-pill" id="rowCount${k}"></span>
+          </div>
+          <table id="tbl${k}" class="kn-table">
+            <thead>
+              <tr>
+                <th class="center kn-th-stt">STT</th>
+                <th class="kn-th-name">Tên thiết bị *</th>
+                <th class="kn-th-name">Tên thương mại *</th>
+                <th class="kn-th-dvt">ĐVT</th>
+                <th class="right kn-th-qty">Số lượng *</th>
+                <th class="kn-th-note">Ghi chú</th>
+                <th class="center kn-th-del">Xóa</th>
+              </tr>
+            </thead>
+            <tbody id="tbody${k}"></tbody>
+            <tfoot>
+              <tr>
+                <td colspan="6" class="center add">
+                  <button id="btnAdd${k}">+ Thêm dòng</button>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        `;
+          kyNangTables.appendChild(tableWrap);
+        }
+        for (let k = 0; k < soKyNang; k++) {
+          document.getElementById(`btnAdd${k}`).onclick = () => addRow(k);
+          document.getElementById(`btnDelTable${k}`).onclick = () =>
+            delTable(k);
+          // Khôi phục dữ liệu dòng
+          for (let i = 0; i < (window.kyNangData[k]?.rows?.length || 0); i++)
+            addRow(k, window.kyNangData[k].rows[i]);
+          if (!window.kyNangData[k]?.rows?.length)
+            for (let i = 0; i < 3; i++) addRow(k);
+          updateRowCount(k);
+          const kyThuatInput = document.getElementById(`kyThuat${k}`);
+          kyThuatInput.oninput = (e) => {
+            e.target.classList.remove("error"); // Remove error khi user gõ
+            window.kyNangData[k].kyThuat = e.target.value;
+          };
+          kyThuatInput.onchange = (e) => {
+            e.target.classList.remove("error"); // Remove error khi user change
+          };
+        }
+      }
+
+      function addRow(k, rowData) {
+        const tb = document.getElementById(`tbody${k}`);
+        const idx = tb.children.length + 1;
+        const row = document.createElement("tr");
+
+        // Tạo datalist động cho từng dòng
+        const dlTenTBId = `dlTenTB_${k}_${idx}`;
+        const dlTenThuongMaiId = `dlTenThuongMai_${k}_${idx}`;
+
+        row.innerHTML = `
+      <td class="center">${idx}</td>
+      <td>
+        <input class="tenTB" list="${dlTenTBId}" required placeholder="Tên thiết bị" value="${rowData?.tenTB || ""}" autocomplete="off">
+        <datalist id="${dlTenTBId}"></datalist>
+      </td>
+      <td>
+        <input class="tenThuongMai" list="${dlTenThuongMaiId}" required placeholder="Tên thương mại" value="${rowData?.tenThuongMai || ""}" autocomplete="off">
+        <datalist id="${dlTenThuongMaiId}"></datalist>
+        <input type="hidden" class="loai" value="${rowData?.loai || ""}">
+        <input type="hidden" class="nuoc" value="${rowData?.nuoc || ""}">
+        <input type="hidden" class="hang" value="${rowData?.hang || ""}">
+        <input type="hidden" class="model" value="${rowData?.model || ""}">
+      </td>
+      <td>
+        <input type="text" class="dvt dvt-readonly" placeholder="ĐVT" value="${rowData?.dvt || ""}" readonly>
+      </td>
+      <td class="right">
+        <input type="number" class="sl" min="1" value="${rowData?.sl || 1}" required>
+      </td>
+      <td>
+        <input type="text" class="ghichu" placeholder="Ghi chú (nếu có)" value="${rowData?.ghichu || ""}">
+      </td>
+      <td class="center">
+        <button onclick="delRow(this,${k})">✕</button>
+      </td>
+    `;
+        tb.appendChild(row);
+
+        // Lấy các input elements
+        const tenTBInput = row.querySelector(".tenTB");
+        const tenThuongMaiInput = row.querySelector(".tenThuongMai");
+        const loaiInput = row.querySelector(".loai");
+        const nuocInput = row.querySelector(".nuoc");
+        const hangInput = row.querySelector(".hang");
+        const modelInput = row.querySelector(".model");
+        const dvtInput = row.querySelector(".dvt");
+
+        // Khởi tạo datalist với tất cả options
+        console.log(
+          "🔧 Initializing datalists for row",
+          idx,
+          "in table",
+          k,
+          "- DANH_MUC_DATA length:",
+          DANH_MUC_DATA?.length || 0,
+        );
+        updateTenTBDatalist(dlTenTBId, "");
+        updateTenThuongMaiDatalist(dlTenThuongMaiId, "");
+
+        // Hàm xử lý auto-fill khi chọn "Tên thương mại"
+        const handleTenThuongMaiChange = function () {
+          const selectedTenThuongMai = this.value.trim();
+          if (!selectedTenThuongMai) {
+            // Clear auto-filled fields if input is empty
+            loaiInput.value = "";
+            nuocInput.value = "";
+            hangInput.value = "";
+            modelInput.value = "";
+            saveTableData(k);
+            return;
+          }
+
+          // Tìm các dòng có cùng tên thương mại
+          const matches = DANH_MUC_DATA.filter(
+            (x) => x.tenThuongMai === selectedTenThuongMai,
+          );
+
+          if (matches.length === 1) {
+            // Chỉ có 1 kết quả - tự động điền
+            const match = matches[0];
+            tenTBInput.value = match.tenTB || "";
+            dvtInput.value = match.dvt || "";
+            loaiInput.value = match.loai || "";
+            nuocInput.value = match.nuocSX || "";
+            hangInput.value = match.hang || "";
+            modelInput.value = match.ncc || "";
+            saveTableData(k);
+          } else if (matches.length > 1) {
+            // Nhiều kết quả - cho user chọn
+            showSelectionPopup(matches, (selected) => {
+              tenTBInput.value = selected.tenTB || "";
+              dvtInput.value = selected.dvt || "";
+              loaiInput.value = selected.loai || "";
+              nuocInput.value = selected.nuocSX || "";
+              hangInput.value = selected.hang || "";
+              modelInput.value = selected.ncc || "";
+              saveTableData(k);
+            });
+          }
+        };
+
+        // Event: Khi chọn "Tên thương mại" - tự động điền các trường khác
+        // Sử dụng cả 'input' và 'change' để tương thích mobile và desktop
+        tenThuongMaiInput.addEventListener("input", handleTenThuongMaiChange);
+        tenThuongMaiInput.addEventListener("change", handleTenThuongMaiChange);
+
+        // Hàm xử lý auto-fill khi chọn "Tên thiết bị"
+        const handleTenTBChange = function () {
+          const selectedTenTB = this.value.trim();
+          if (selectedTenTB) {
+            updateTenThuongMaiDatalist(dlTenThuongMaiId, selectedTenTB);
+
+            // Nếu chỉ có 1 tên thương mại - tự động điền
+            const matchingOptions = DANH_MUC_DATA.filter(
+              (x) => x.tenTB === selectedTenTB,
+            );
+            if (matchingOptions.length === 1) {
+              const match = matchingOptions[0];
+              tenThuongMaiInput.value = match.tenThuongMai || "";
+              dvtInput.value = match.dvt || "";
+              loaiInput.value = match.loai || "";
+              nuocInput.value = match.nuocSX || "";
+              hangInput.value = match.hang || "";
+              modelInput.value = match.ncc || "";
+              saveTableData(k);
+            }
+          }
+        };
+
+        // Event: Khi chọn "Tên thiết bị" - auto-fill nếu chỉ có 1 "Tên thương mại"
+        // Sử dụng cả 'input' và 'change' để tương thích mobile và desktop
+        tenTBInput.addEventListener("change", handleTenTBChange);
+        tenTBInput.addEventListener("blur", handleTenTBChange);
+
+        // Event: Khi nhập "Tên thiết bị" - lọc dropdown "Tên thương mại"
+        tenTBInput.addEventListener("input", function () {
+          const selectedTenTB = this.value.trim();
+          updateTenThuongMaiDatalist(dlTenThuongMaiId, selectedTenTB);
+        });
+
+        renumber(k);
+        updateRowCount(k);
+
+        // Lưu dữ liệu khi thay đổi và remove error class
+        [...row.querySelectorAll("input")].forEach((input) => {
+          input.oninput = () => {
+            input.classList.remove("error"); // Remove error khi user gõ
+            saveTableData(k);
+          };
+          input.onchange = () => {
+            input.classList.remove("error"); // Remove error khi user change
+          };
+        });
+      }
+
+      // Hàm cập nhật datalist "Tên thiết bị" với filter
+      function updateTenTBDatalist(datalistId, filterText) {
+        const datalist = document.getElementById(datalistId);
+        if (!datalist) return;
+
+        // Kiểm tra nếu DANH_MUC_DATA chưa được load
+        if (!DANH_MUC_DATA || DANH_MUC_DATA.length === 0) {
+          console.warn("⚠️ DANH_MUC_DATA chưa được load");
+          return;
+        }
+
+        const filtered = filterText
+          ? [
+              ...new Set(
+                DANH_MUC_DATA.filter(
+                  (x) =>
+                    x.tenTB &&
+                    x.tenTB.toLowerCase().includes(filterText.toLowerCase()),
+                ).map((x) => x.tenTB),
+              ),
+            ]
+          : [
+              ...new Set(
+                DANH_MUC_DATA.map((x) => x.tenTB || "").filter(Boolean),
+              ),
+            ];
+
+        datalist.innerHTML = filtered
+          .sort()
+          .map((v) => `<option value="${escapeHtml(v)}">`)
+          .join("");
+      }
+
+      // Hàm cập nhật datalist "Tên thương mại" dựa vào "Tên thiết bị" đã chọn
+      function updateTenThuongMaiDatalist(datalistId, selectedTenTB) {
+        const datalist = document.getElementById(datalistId);
+        if (!datalist) return;
+
+        // Kiểm tra nếu DANH_MUC_DATA chưa được load
+        if (!DANH_MUC_DATA || DANH_MUC_DATA.length === 0) {
+          console.warn("⚠️ DANH_MUC_DATA chưa được load");
+          return;
+        }
+
+        let options = [];
+        if (selectedTenTB) {
+          // Lọc những "Tên thương mại" có cùng "Tên thiết bị"
+          options = [
+            ...new Set(
+              DANH_MUC_DATA.filter(
+                (x) => x.tenTB === selectedTenTB && x.tenThuongMai,
+              ).map((x) => x.tenThuongMai),
+            ),
+          ];
+        } else {
+          // Hiển thị tất cả nếu chưa chọn "Tên thiết bị"
+          options = [
+            ...new Set(
+              DANH_MUC_DATA.map((x) => x.tenThuongMai || "").filter(Boolean),
+            ),
+          ];
+        }
+
+        datalist.innerHTML = options
+          .sort()
+          .map((v) => `<option value="${escapeHtml(v)}">`)
+          .join("");
+      }
+
+      // Hàm refresh tất cả datalists trong các bảng đã tạo
+      function refreshAllDatalists() {
+        console.log(
+          "🔄 Refreshing all datalists with",
+          DANH_MUC_DATA?.length || 0,
+          "items",
+        );
+
+        // Tìm tất cả các datalist có id dạng dlTenTB_* hoặc dlTenThuongMai_*
+        const allDataLists = document.querySelectorAll(
+          'datalist[id^="dlTenTB_"], datalist[id^="dlTenThuongMai_"]',
+        );
+
+        allDataLists.forEach((datalist) => {
+          const id = datalist.id;
+          if (id.startsWith("dlTenTB_")) {
+            updateTenTBDatalist(id, "");
+          } else if (id.startsWith("dlTenThuongMai_")) {
+            updateTenThuongMaiDatalist(id, "");
+          }
+        });
+
+        console.log("✅ Refreshed", allDataLists.length, "datalists");
+      }
+
+      // Hiển thị popup cho user chọn khi có nhiều kết quả
+      function showSelectionPopup(matches, callback) {
+        const popup = document.createElement("div");
+        popup.style.position = "fixed";
+        popup.style.top = "50%";
+        popup.style.left = "50%";
+        popup.style.transform = "translate(-50%, -50%)";
+        popup.style.background = "white";
+        popup.style.padding = "20px";
+        popup.style.border = "1px solid #ccc";
+        popup.style.borderRadius = "10px";
+        popup.style.boxShadow = "0 2px 10px rgba(0,0,0,0.2)";
+        popup.style.zIndex = "10000";
+        popup.style.maxWidth = "600px";
+        popup.style.maxHeight = "70vh";
+        popup.style.overflow = "auto";
+
+        let html = "<h3>Có nhiều kết quả - Vui lòng chọn:</h3>";
+        html +=
+          '<table class="selection-table">';
+        html +=
+          '<thead><tr><th class="selection-cell">Tên TB</th><th class="selection-cell">ĐVT</th><th class="selection-cell">Loại</th><th class="selection-cell">Model</th><th class="selection-cell">Chọn</th></tr></thead>';
+        html += "<tbody>";
+        matches.forEach((match, idx) => {
+          html += `<tr>
+        <td class="selection-cell">${escapeHtml(match.tenTB || "")}</td>
+        <td class="selection-cell">${escapeHtml(match.dvt || "")}</td>
+        <td class="selection-cell">${escapeHtml(match.loai || "")}</td>
+        <td class="selection-cell">${escapeHtml(match.ncc || "")}</td>
+        <td class="selection-cell center">
+          <button class="select-btn btn-popup-select" data-idx="${idx}">Chọn</button>
+        </td>
+      </tr>`;
+        });
+        html += "</tbody></table>";
+        html +=
+          '<button id="cancelSelection" class="btn-popup-cancel">Hủy</button>';
+
+        popup.innerHTML = html;
+        document.body.appendChild(popup);
+
+        // Event listeners cho các nút chọn
+        popup.querySelectorAll(".select-btn").forEach((btn) => {
+          btn.addEventListener("click", function () {
+            const idx = parseInt(this.getAttribute("data-idx"));
+            const selected = matches[idx];
+            document.body.removeChild(popup);
+            callback(selected);
+          });
+        });
+
+        // Event listener cho nút hủy
+        document
+          .getElementById("cancelSelection")
+          .addEventListener("click", function () {
+            document.body.removeChild(popup);
+          });
+      }
+      function saveTableData(k) {
+        const tb = document.getElementById(`tbody${k}`);
+        window.kyNangData[k].rows = [...tb.children].map((tr) => ({
+          tenTB: tr.querySelector(".tenTB").value,
+          tenThuongMai: tr.querySelector(".tenThuongMai").value,
+          loai: tr.querySelector(".loai").value,
+          nuoc: tr.querySelector(".nuoc").value,
+          hang: tr.querySelector(".hang").value,
+          model: tr.querySelector(".model").value,
+          dvt: tr.querySelector(".dvt").value,
+          sl: tr.querySelector(".sl").value,
+          ghichu: tr.querySelector(".ghichu").value,
+        }));
+      }
+      function delTable(k) {
+        window.kyNangData.splice(k, 1);
+        document.getElementById("soKyNang").value = window.kyNangData.length;
+        initTable();
+      }
+      function delRow(btn, k) {
+        const tr = btn.closest("tr");
+        tr.parentNode.removeChild(tr);
+        renumber(k);
+        updateRowCount(k);
+        saveTableData(k);
+      }
+      function renumber(k) {
+        [...document.querySelectorAll(`#tbody${k} tr`)].forEach((tr, i) => {
+          tr.children[0].textContent = i + 1;
+        });
+      }
+      function updateRowCount(k) {
+        const n = document.querySelectorAll(`#tbody${k} tr`).length;
+        document.getElementById(`rowCount${k}`).textContent = `${n} dòng`;
+      }
+
+      // Khi user chọn Tên thiết bị (Ô 2)
+      function resetForm() {
+        clearMsg();
+        document.getElementById("donViCoSo").value = "";
+        document.getElementById("khoXuat").value = "";
+        document.getElementById("ngayHoc").value = "";
+        document.getElementById("gioBatDau").value = "";
+        document.getElementById("gioKetThuc").value = "";
+        document.getElementById("maHocPhan").value = "";
+        document.getElementById("hocPhan").value = "";
+        const loaiLabInput = document.getElementById("loaiLab");
+        loaiLabInput.value = "";
+        loaiLabInput.readOnly = false;
+        document.getElementById("phongLab").value = "";
+
+        // Tự động điền lại thông tin user từ USER_INFO
+        document.getElementById("giangVien").value = USER_INFO.hoTen || "";
+        document.getElementById("soDienThoai").value = USER_INFO.sdt || "";
+        document.getElementById("giangVienPhuTrach").value =
+          USER_INFO.hoTen || "";
+        document.getElementById("emailGiangVienPhuTrach").value =
+          USER_INFO.email || "";
+
+        document.getElementById("ngayNhan").value = "";
+        document.getElementById("gioNhan").value = "";
+        document.getElementById("ngayTra").value = "";
+        document.getElementById("gioTra").value = "";
+        document.getElementById("hocKy").value = "";
+        document.getElementById("soKyNang").value = "1";
+        document.getElementById("ts").value = "";
+
+        // Reset các bảng kỹ năng
+        window.kyNangData = [];
+        document.getElementById("kyNangTables").innerHTML = "";
+        document.getElementById("submitToolbar").style.display = "none";
+        window.LAST_ID_DEXUAT = null;
+      }
+
+      function submitForm() {
+        // Prevent double submit
+        if (IS_SUBMITTING) {
+          console.log("⚠️ Already submitting...");
+          return;
+        }
+
+        clearMsg();
+
+        // Clear all previous errors
+        document
+          .querySelectorAll(".error")
+          .forEach((el) => el.classList.remove("error"));
+        document
+          .querySelectorAll(".error-msg")
+          .forEach((el) => el.classList.remove("show"));
+
+        let hasError = false;
+
+        try {
+          const donViCoSo = document.getElementById("donViCoSo").value;
+          const khoXuat = document.getElementById("khoXuat").value;
+          const ngayHoc = document.getElementById("ngayHoc").value;
+          const gioBatDau = document.getElementById("gioBatDau").value;
+          const gioKetThuc = document.getElementById("gioKetThuc").value;
+          const maHP = document.getElementById("maHocPhan").value.trim();
+          const hp = document.getElementById("hocPhan").value.trim();
+          const loaiLab = document.getElementById("loaiLab").value.trim();
+          const phong = document.getElementById("phongLab").value.trim();
+          const gv = document.getElementById("giangVien").value.trim();
+          const sdt = document.getElementById("soDienThoai").value.trim();
+          const email = document.getElementById("email").value.trim();
+          const ngayNhan = document.getElementById("ngayNhan").value;
+          const gioNhan = document.getElementById("gioNhan").value.trim();
+          const ngayTra = document.getElementById("ngayTra").value;
+          const gioTra = document.getElementById("gioTra").value.trim();
+
+          // Lấy 3 trường mới (khai báo trước khi validate)
+          const gvpt = document
+            .getElementById("giangVienPhuTrach")
+            .value.trim();
+          const emailgvpt = document
+            .getElementById("emailGiangVienPhuTrach")
+            .value.trim();
+          const hocKy = document.getElementById("hocKy").value.trim();
+
+          // Validate thông tin đơn vị và kho xuất
+          if (!donViCoSo) {
+            showFieldError("donViCoSo", "Vui lòng chọn đơn vị cơ sở");
+            return;
+          }
+          if (!khoXuat) {
+            showFieldError("khoXuat", "Vui lòng chọn kho xuất");
+            return;
+          }
+
+          // Validate giảng viên phụ trách (required)
+          if (!gvpt) {
+            showFieldError(
+              "giangVienPhuTrach",
+              "Vui lòng nhập tên giảng viên phụ trách",
+            );
+            return;
+          }
+
+          // Validate email giảng viên phụ trách (required + phải có đuôi @eiu.edu.vn)
+          if (!emailgvpt) {
+            showFieldError(
+              "emailGiangVienPhuTrach",
+              "Vui lòng nhập email giảng viên phụ trách",
+            );
+            return;
+          }
+          if (!emailgvpt.endsWith("@eiu.edu.vn")) {
+            showFieldError(
+              "emailGiangVienPhuTrach",
+              "Email phải có đuôi @eiu.edu.vn",
+            );
+            return;
+          }
+
+          // Validate học kỳ (required)
+          if (!hocKy) {
+            showFieldError("hocKy", "Vui lòng nhập học kỳ");
+            return;
+          }
+
+          // Validate các trường bắt buộc mới
+          if (!ngayNhan) {
+            showFieldError("ngayNhan", "Vui lòng chọn ngày nhận");
+            return;
+          }
+          if (!gioNhan) {
+            showFieldError("gioNhan", "Vui lòng chọn giờ nhận");
+            return;
+          }
+          if (!ngayTra) {
+            showFieldError("ngayTra", "Vui lòng chọn ngày trả");
+            return;
+          }
+          if (!gioTra) {
+            showFieldError("gioTra", "Vui lòng chọn giờ trả");
+            return;
+          }
+
+          // Validate các trường khác
+          if (!ngayHoc) {
+            showFieldError("ngayHoc", "Vui lòng chọn ngày học");
+            return;
+          }
+          if (!gioBatDau || !gioKetThuc) {
+            if (!gioBatDau)
+              showFieldError("gioBatDau", "Vui lòng chọn giờ bắt đầu");
+            if (!gioKetThuc)
+              showFieldError("gioKetThuc", "Vui lòng chọn giờ kết thúc");
+            return;
+          }
+          if (!maHP) {
+            showFieldError("maHocPhan", "Vui lòng chọn mã môn học");
+            return;
+          }
+          if (!phong) {
+            showFieldError("phongLab", "Vui lòng chọn phòng/lab");
+            return;
+          }
+          if (!sdt || sdt.length !== 10) {
+            showFieldError("soDienThoai", "Số điện thoại phải gồm 10 số");
+            return;
+          }
+          // Validate từng bảng kỹ năng
+          const soKyNang = window.kyNangData.length;
+          const items = [];
+          for (let k = 0; k < soKyNang; k++) {
+            const kyThuatInput = document.getElementById(`kyThuat${k}`);
+            const kyThuat = kyThuatInput.value.trim();
+            if (!kyThuat) {
+              showFieldError(
+                `kyThuat${k}`,
+                `Kỹ năng/Bài thực hành #${k + 1}: "Tên kỹ thuật/Bài thí nghiệm" là bắt buộc.`,
+              );
+              return;
+            }
+            const rows = [...document.querySelectorAll(`#tbody${k} tr`)];
+            if (!rows.length) {
+              msgErr(
+                `Kỹ năng/Bài thực hành #${k + 1}: Vui lòng thêm ít nhất 1 dòng thiết bị.`,
+              );
+              return;
+            }
+            for (let i = 0; i < rows.length; i++) {
+              const tr = rows[i];
+              const tenTB = tr.querySelector(".tenTB").value.trim();
+              const tenThuongMai = tr
+                .querySelector(".tenThuongMai")
+                .value.trim();
+              const loai = tr.querySelector(".loai").value.trim();
+              const nuoc = tr.querySelector(".nuoc").value.trim();
+              const hang = tr.querySelector(".hang").value.trim();
+              const model = tr.querySelector(".model").value.trim();
+              const dvt = tr.querySelector(".dvt").value.trim();
+              const sl = Number(tr.querySelector(".sl").value);
+              const gc = tr.querySelector(".ghichu").value.trim();
+              if (!tenTB) {
+                msgErr(
+                  `Kỹ năng #${k + 1} - Dòng #${i + 1}: "Tên thiết bị" là bắt buộc.`,
+                );
+                tr.querySelector(".tenTB").classList.add("error");
+                tr.querySelector(".tenTB").focus();
+                tr.querySelector(".tenTB").scrollIntoView({
+                  behavior: "smooth",
+                  block: "center",
+                });
+                return;
+              }
+              if (!tenThuongMai) {
+                msgErr(
+                  `Kỹ năng #${k + 1} - Dòng #${i + 1}: "Tên thương mại" là bắt buộc.`,
+                );
+                tr.querySelector(".tenThuongMai").classList.add("error");
+                tr.querySelector(".tenThuongMai").focus();
+                tr.querySelector(".tenThuongMai").scrollIntoView({
+                  behavior: "smooth",
+                  block: "center",
+                });
+                return;
+              }
+              if (!(sl > 0)) {
+                msgErr(
+                  `Kỹ năng #${k + 1} - Dòng #${i + 1}: "Số lượng" phải > 0.`,
+                );
+                tr.querySelector(".sl").classList.add("error");
+                tr.querySelector(".sl").focus();
+                tr.querySelector(".sl").scrollIntoView({
+                  behavior: "smooth",
+                  block: "center",
+                });
+                return;
+              }
+              items.push({
+                tenThietBi: tenTB,
+                tenThuongMai: tenThuongMai,
+                loai: loai,
+                nuocSX: nuoc,
+                hang: hang,
+                ncc: model,
+                dvt: dvt,
+                soLuong: sl,
+                ghiChu: gc,
+                kyThuat: kyThuat,
+              });
+            }
+          }
+
+          // Check for duplicate items
+          const seen = new Map();
+          const duplicates = [];
+          items.forEach((item, index) => {
+            const key = `${item.tenThietBi}|${item.kyThuat}`;
+            if (seen.has(key)) {
+              duplicates.push({
+                index: index + 1,
+                name: item.tenThietBi,
+                kyThuat: item.kyThuat,
+              });
+            } else {
+              seen.set(key, true);
+            }
+          });
+
+          if (duplicates.length > 0) {
+            const dupList = duplicates
+              .map((d) => `- ${d.name} (${d.kyThuat})`)
+              .join("\n");
+            if (
+              !confirm(
+                `⚠️ Phát hiện ${duplicates.length} thiết bị bị trùng:\n\n${dupList}\n\nTiếp tục gửi?`,
+              )
+            ) {
+              return;
+            }
+          }
+
+          // Show confirmation summary
+          const summary =
+            `📋 XÁC NHẬN ĐĂNG KÝ\n\n` +
+            `📅 Ngày học: ${ngayHoc}\n` +
+            `🕐 Giờ học: ${gioBatDau} - ${gioKetThuc}\n` +
+            `🏫 Phòng/Lab: ${phong}\n` +
+            `📦 Tổng số thiết bị: ${items.length}\n` +
+            `\nBạn có chắc chắn muốn gửi?`;
+
+          if (!confirm(summary)) {
+            return;
+          }
+
+          const gioHoc = `${gioBatDau} - ${gioKetThuc}`;
+          const meta = {
+            donViCoSo: donViCoSo,
+            khoXuat: khoXuat, // Gửi lên server
+            ngayHoc: ngayHoc,
+            gioHoc: gioHoc,
+            maHocPhan: maHP,
+            hocPhan: hp,
+            loaiLab: loaiLab,
+            phongLab: phong,
+            giangVien: gv,
+            soDienThoai: sdt,
+            email: email,
+            ngayNhan: ngayNhan,
+            gioNhan: gioNhan,
+            ngayTra: ngayTra,
+            gioTra: gioTra,
+            giangVienPhuTrach: gvpt,
+            emailGiangVienPhuTrach: emailgvpt,
+            hocKy: hocKy,
+          };
+          const payload = { meta, items };
+          if (window.LAST_ID_DEXUAT) {
+            payload.oldIdDexuat = window.LAST_ID_DEXUAT;
+            console.log(
+              "📝 Đang gửi lại với oldIdDexuat:",
+              window.LAST_ID_DEXUAT,
+            );
+          } else {
+            console.log("✨ Đang gửi mới (không có oldIdDexuat)");
+          }
+
+          // Set submitting flag
+          IS_SUBMITTING = true;
+
+          const submitBtn = document.getElementById("btnSubmit");
+          submitBtn.disabled = true;
+          submitBtn.classList.add("loading");
+          submitBtn.textContent = "Đang gửi...";
+          google.script.run
+            .withSuccessHandler((res) => {
+              IS_SUBMITTING = false;
+              submitBtn.disabled = false;
+              submitBtn.classList.remove("loading");
+              submitBtn.textContent = "Gửi đăng ký";
+              if (res && res.ok) {
+                msgOk(
+                  "✅ Bạn đã đăng ký thành công! Vui lòng kiểm tra email xác nhận.",
+                );
+                document.getElementById("ts").value = new Date().toLocaleString(
+                  "vi-VN",
+                );
+                if (res.idDexuat) {
+                  window.LAST_ID_DEXUAT = res.idDexuat;
+                  console.log("💾 Đã lưu LAST_ID_DEXUAT:", res.idDexuat);
+                } else {
+                  console.log("⚠️ Response không có idDexuat:", res);
+                }
+                // Không hiển thị popup sau khi gửi - user có thể dùng nút "Chỉnh sửa phiếu" nếu cần
+              } else {
+                msgErr("❌ Không rõ kết quả gửi. Vui lòng thử lại.");
+              }
+            })
+            .withFailureHandler(function (err) {
+              IS_SUBMITTING = false;
+              submitBtn.disabled = false;
+              submitBtn.classList.remove("loading");
+              submitBtn.textContent = "Gửi đăng ký";
+              let errorMsg = "❌ Có lỗi khi gửi biểu mẫu.";
+              if (err) {
+                if (typeof err === "string") {
+                  if (err.includes("timeout") || err.includes("timed out")) {
+                    errorMsg =
+                      "⏱️ Kết nối chậm hoặc timeout. Vui lòng thử lại.";
+                  } else if (
+                    err.includes("permission") ||
+                    err.includes("quyền")
+                  ) {
+                    errorMsg =
+                      "🔒 Không có quyền truy cập. Vui lòng đăng nhập lại.";
+                  } else {
+                    errorMsg = "❌ " + err;
+                  }
+                } else if (err.message) {
+                  if (
+                    err.message.includes("timeout") ||
+                    err.message.includes("timed out")
+                  ) {
+                    errorMsg =
+                      "⏱️ Kết nối chậm hoặc timeout. Vui lòng thử lại.";
+                  } else if (
+                    err.message.includes("permission") ||
+                    err.message.includes("quyền")
+                  ) {
+                    errorMsg =
+                      "🔒 Không có quyền truy cập. Vui lòng đăng nhập lại.";
+                  } else {
+                    errorMsg = "❌ " + err.message;
+                  }
+                }
+              }
+              msgErr(errorMsg);
+
+              // Retry option
+              if (confirm("❓ Có muốn thử gửi lại không?")) {
+                IS_SUBMITTING = false;
+                submitForm();
+              }
+            })
+            .submitRegistration(payload);
+        } catch (e) {
+          IS_SUBMITTING = false;
+          msgErr("❌ " + (e.message || "Lỗi không xác định."));
+        }
+      }
+
+      // Show field error
+      function showFieldError(fieldId, message) {
+        const field = document.getElementById(fieldId);
+        const errorMsg = document.getElementById("err-" + fieldId);
+
+        if (field) {
+          field.classList.add("error");
+          field.focus(); // Focus vào ô bị lỗi
+
+          // Scroll đến ô bị lỗi
+          field.scrollIntoView({ behavior: "smooth", block: "center" });
+
+          // Auto remove error khi user bắt đầu sửa
+          const removeError = () => {
+            field.classList.remove("error");
+            if (errorMsg) errorMsg.classList.remove("show");
+            field.removeEventListener("input", removeError);
+            field.removeEventListener("change", removeError);
+          };
+
+          field.addEventListener("input", removeError);
+          field.addEventListener("change", removeError);
+        }
+
+        if (errorMsg) {
+          errorMsg.textContent = message;
+          errorMsg.classList.add("show");
+        }
+
+        // Hiển thị message ở top
+        msgErr("❌ " + message);
+      }
+
+      // Real-time validation for phone number
+      document.addEventListener("DOMContentLoaded", () => {
+        const phoneInput = document.getElementById("soDienThoai");
+        if (phoneInput) {
+          phoneInput.addEventListener("input", (e) => {
+            // Only allow numbers
+            e.target.value = e.target.value.replace(/[^0-9]/g, "");
+
+            // Remove error when typing
+            if (e.target.value.length === 10) {
+              e.target.classList.remove("error");
+              document
+                .getElementById("err-soDienThoai")
+                ?.classList.remove("show");
+            }
+          });
+        }
+
+        // Real-time validation for dates
+        const ngayHocInput = document.getElementById("ngayHoc");
+        if (ngayHocInput) {
+          ngayHocInput.addEventListener("change", () => {
+            const selectedDate = new Date(ngayHocInput.value);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (selectedDate >= today) {
+              ngayHocInput.classList.remove("error");
+              document.getElementById("err-ngayHoc")?.classList.remove("show");
+            }
+            // Set max for Ngày nhận to Ngày học
+            const ngayNhanInput = document.getElementById("ngayNhan");
+            if (ngayNhanInput) {
+              ngayNhanInput.max = ngayHocInput.value || "";
+            }
+          });
+        }
+      });
+
+      // Helpers
+      function escapeHtml(s) {
+        return String(s ?? "").replace(/[&<>"']/g, (m) =>
+          m === "&"
+            ? "&amp;"
+            : m === "<"
+              ? "&lt;"
+              : m === ">"
+                ? "&gt;"
+                : m == '"'
+                  ? "&quot;"
+                  : "&#39;",
+        );
+      }
+
+      // Load registration by ID
+      function loadRegistrationById() {
+        const idDexuat = document.getElementById("loadIdDexuat").value.trim();
+        if (!idDexuat) {
+          msgErr("⚠️ Vui lòng nhập ID phiếu đăng ký");
+          return;
+        }
+
+        clearMsg();
+        const loadBtn = document.getElementById("btnLoadRegistration");
+        loadBtn.disabled = true;
+        loadBtn.textContent = "⏳ Đang tải...";
+
+        google.script.run
+          .withSuccessHandler((data) => {
+            loadBtn.disabled = false;
+            loadBtn.textContent = "🔄 Tải lại phiếu";
+
+            if (!data || !data.meta) {
+              msgErr("❌ Không tìm thấy dữ liệu phiếu đăng ký");
+              return;
+            }
+
+            // Fill meta data
+            const meta = data.meta;
+            document.getElementById("donViCoSo").value = meta.donViCoSo || "";
+            document.getElementById("khoXuat").value = meta.khoXuat || "";
+            document.getElementById("ngayHoc").value = meta.ngayHoc || "";
+
+            // Parse giờ học "HH:mm - HH:mm"
+            if (meta.gioHoc) {
+              const match = meta.gioHoc.match(
+                /^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/,
+              );
+              if (match) {
+                document.getElementById("gioBatDau").value = match[1];
+                document.getElementById("gioKetThuc").value = match[2];
+              }
+            }
+
+            document.getElementById("hocKy").value = meta.hocKy || "";
+            document.getElementById("maHocPhan").value = meta.maHocPhan || "";
+            document.getElementById("hocPhan").value = meta.hocPhan || "";
+            document.getElementById("loaiLab").value = meta.loaiLab || "";
+
+            // Update phong dropdown and select
+            updatePhongDropdown(meta.loaiLab || "");
+            setTimeout(() => {
+              document.getElementById("phongLab").value = meta.phongLab || "";
+            }, 100);
+
+            document.getElementById("giangVien").value = meta.giangVien || "";
+            document.getElementById("email").value = meta.email || "";
+            document.getElementById("soDienThoai").value =
+              meta.soDienThoai || "";
+            document.getElementById("ngayNhan").value = meta.ngayNhan || "";
+
+            // Giờ nhận và giờ trả cần format từ serial number hoặc string
+            if (meta.gioNhan) {
+              // Nếu là string thì dùng trực tiếp, nếu là số thì bỏ qua (vì đã là time serial)
+              document.getElementById("gioNhan").value = meta.gioNhan;
+            }
+
+            document.getElementById("ngayTra").value = meta.ngayTra || "";
+
+            if (meta.gioTra) {
+              document.getElementById("gioTra").value = meta.gioTra;
+            }
+
+            document.getElementById("giangVienPhuTrach").value =
+              meta.giangVienPhuTrach || "";
+            document.getElementById("emailGiangVienPhuTrach").value =
+              meta.emailGiangVienPhuTrach || "";
+
+            // Set số kỹ năng và load bảng
+            const soKyNang = data.soKyNang || 1;
+            document.getElementById("soKyNang").value = soKyNang;
+
+            // Load kyNangData
+            window.kyNangData = data.kyNangData || [];
+
+            // Save ID để gửi lại với cùng ID
+            window.LAST_ID_DEXUAT = idDexuat;
+
+            // Init tables
+            initTable();
+            document.getElementById("submitToolbar").style.display = "block";
+
+            // Refresh datalists để đảm bảo có dữ liệu
+            refreshAllDatalists();
+
+            msgOk(
+              `✅ Đã tải phiếu đăng ký: ${idDexuat}. Bạn có thể chỉnh sửa và gửi lại.`,
+            );
+
+            // Scroll to tables
+            document
+              .getElementById("kyNangTables")
+              .scrollIntoView({ behavior: "smooth", block: "start" });
+          })
+          .withFailureHandler((err) => {
+            loadBtn.disabled = false;
+            loadBtn.textContent = "🔄 Tải lại phiếu";
+            msgErr("❌ " + (err.message || "Không thể tải phiếu đăng ký"));
+          })
+          .getRegistrationById(idDexuat);
+      }
+    </script>
+  </body>
+</html>
