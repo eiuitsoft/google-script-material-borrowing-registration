@@ -4,10 +4,11 @@
 const CONFIG = {
   CATALOG_SHEET: "Danh mục",
   REQUEST_SHEET: "Đăng ký TB",
+  N8N_WEBHOOK_URL: "https://n8n.eiu.vn/webhook/82bbf839-8656-4e50-b1a2-19fd896e43fa",
   ALLOWED_DOMAIN: "eiu.edu.vn",
   SEND_USER_EMAIL: true,
   SEND_ADMIN_EMAIL: true,
-  ADMIN_EMAIL: "son.nguyenngoc@eiu.edu.vn",
+  ADMIN_EMAIL: "",
   START_WITH_ROWS: 5,
 };
 
@@ -265,9 +266,70 @@ function generateUniqueId() {
   return result;
 }
 
-function generateIdDexuat(maMonHoc, keyId) {
-  if (!keyId) return "";
-  return keyId;
+function getN8nWebhookUrl_() {
+  const props = PropertiesService.getScriptProperties();
+  const configuredUrl = _trim(props.getProperty("N8N_WEBHOOK_URL") || "");
+  if (configuredUrl) return configuredUrl;
+  return CONFIG.N8N_WEBHOOK_URL;
+}
+
+function formatDateToken_(date) {
+  return Utilities.formatDate(date, Session.getScriptTimeZone(), "ddMMyy");
+}
+
+function resolveTransactionPrefix_(transactionType, source) {
+  const basePrefix = transactionType === "XUAT_NHAP_KHO" ? "XK" : "XKDC";
+  // Đánh dấu nguồn để phân biệt phiếu đi từ Google Script.
+  return source === "GOOGLE_SCRIPT" ? `${basePrefix}GS` : basePrefix;
+}
+
+function generateTransactionNo_(sheet, options) {
+  const transactionDate = parseAnyDate(options.transactionDate) || new Date();
+  const transactionType = _trim(options.transactionType) || "XUAT_NHAP_KHO";
+  const source = _trim(options.source) || "GOOGLE_SCRIPT";
+  const providedId = _trim(options.providedId);
+
+  const dateToken = formatDateToken_(transactionDate);
+  const prefix = resolveTransactionPrefix_(transactionType, source);
+  const expectedPrefix = `${prefix}_${dateToken}_`;
+
+  const values = sheet.getDataRange().getValues();
+  const headers = values[0] || [];
+  const idCol = headers.indexOf("ID_Dexuat");
+  const dateCol = headers.indexOf("Ngày học");
+
+  if (idCol < 0 || dateCol < 0) {
+    throw new Error('Không tìm thấy cột "ID_Dexuat" hoặc "Ngày học" trong sheet.');
+  }
+
+  // Nếu có truyền id và đã tồn tại cùng ngày + cùng loại thì dùng lại mã hiện có.
+  if (providedId) {
+    for (let i = 1; i < values.length; i++) {
+      const rowId = _trim(values[i][idCol]);
+      if (rowId !== providedId) continue;
+
+      const rowDate = parseAnyDate(values[i][dateCol]);
+      if (!rowDate) continue;
+
+      const sameDate = formatDateToken_(rowDate) === dateToken;
+      const sameType = rowId.indexOf(expectedPrefix) === 0;
+      if (sameDate && sameType) return rowId;
+    }
+  }
+
+  let maxSeq = 0;
+  for (let i = 1; i < values.length; i++) {
+    const rowId = _trim(values[i][idCol]);
+    if (!rowId || rowId.indexOf(expectedPrefix) !== 0) continue;
+
+    const seqPart = rowId.slice(expectedPrefix.length);
+    if (!/^\d{3}$/.test(seqPart)) continue;
+    const seq = Number(seqPart);
+    if (seq > maxSeq) maxSeq = seq;
+  }
+
+  const nextSeq = String(maxSeq + 1).padStart(3, "0");
+  return `${prefix}_${dateToken}_${nextSeq}`;
 }
 
 function getLookupsForClient() {
@@ -559,7 +621,7 @@ function buildRequestRow_(stt, meta, it, now, submitUniqueId) {
   const gioTra = parseTimeToDate(meta.gioTra);
   const ngayTra = parseAnyDate(meta.ngayTra);
   const rowUniqueId = generateUniqueId();
-  const idDexuat = generateIdDexuat(meta.maHocPhan, submitUniqueId);
+  const idDexuat = _trim(meta.idDexuat);
   return [
     stt,
     _trim(it.tenThietBi),
@@ -675,11 +737,17 @@ function submitRegistration(payload) {
     }
   }
 
+  const transactionType = _trim(meta.transactionType) || "XUAT_NHAP_KHO";
+  const sourceChannel = "GOOGLE_SCRIPT";
   let submitUniqueId;
   if (payload.oldIdDexuat && typeof payload.oldIdDexuat === "string") {
-    const parts = payload.oldIdDexuat.split("-");
-    submitUniqueId = parts[parts.length - 1];
-    meta.idDexuat = payload.oldIdDexuat;
+    submitUniqueId = payload.oldIdDexuat;
+    meta.idDexuat = generateTransactionNo_(sh, {
+      providedId: payload.oldIdDexuat,
+      transactionDate: meta.ngayHoc,
+      transactionType: transactionType,
+      source: sourceChannel,
+    });
 
     const allRows = sh.getDataRange().getValues();
     const idDexuatCol = REQUEST_HEADERS_ATOZ.indexOf("ID_Dexuat");
@@ -698,7 +766,11 @@ function submitRegistration(payload) {
     }
   } else {
     submitUniqueId = generateUniqueId();
-    meta.idDexuat = generateIdDexuat(meta.maHocPhan, submitUniqueId);
+    meta.idDexuat = generateTransactionNo_(sh, {
+      transactionDate: meta.ngayHoc,
+      transactionType: transactionType,
+      source: sourceChannel,
+    });
   }
 
   const lastRow = sh.getLastRow();
@@ -804,8 +876,7 @@ function submitRegistration(payload) {
   // --- TÍCH HỢP BẮN WEBHOOK SANG N8N ---
   // ==========================================
   try {
-    const n8nWebhookUrl =
-      "https://n8n.eiu.vn/webhook-test/82bbf839-8656-4e50-b1a2-19fd896e43fa";
+    const n8nWebhookUrl = getN8nWebhookUrl_();
 
     // Cấu trúc Data JSON đẩy sang n8n
     const n8nPayload = {
@@ -814,6 +885,9 @@ function submitRegistration(payload) {
         : "new_registration",
       timestamp: new Date().toISOString(),
       idDexuat: meta.idDexuat,
+      transactionNo: meta.idDexuat,
+      transactionType: transactionType,
+      sourceChannel: sourceChannel,
       meta: meta, // Dữ liệu Đơn vị và Kho đã nằm trong `meta` nếu bạn gửi từ `index.html`
       items: payload.items,
       source: "EIU_Equipment_System",
@@ -827,7 +901,19 @@ function submitRegistration(payload) {
       muteHttpExceptions: true,
     };
 
-    UrlFetchApp.fetch(n8nWebhookUrl, options);
+    const response = UrlFetchApp.fetch(n8nWebhookUrl, options);
+    const responseCode = response.getResponseCode();
+    const responseText = response.getContentText();
+
+    Logger.log(
+      `N8N webhook response: code=${responseCode}, body=${responseText}`,
+    );
+
+    if (responseCode >= 400) {
+      throw new Error(
+        `Webhook trả về lỗi HTTP ${responseCode}. Body: ${responseText}`,
+      );
+    }
     Logger.log("✅ Đã bắn webhook sang n8n thành công");
   } catch (err) {
     Logger.log("❌ Lỗi khi gửi tới n8n: " + err.toString());

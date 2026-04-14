@@ -10,10 +10,11 @@
 
 // ==================== CONFIG ====================
 
-// URL của Bot Web App - CẬP NHẬT: Feb 2, 2026 11:44 PM
-// LƯU Ý: Phải update URL mới nhất sau mỗi lần deploy bot
+// Dùng chung webhook từ CONFIG nếu có (chạy cùng project),
+// fallback sang URL mặc định nếu file được copy chạy độc lập.
 const BOT_WEBAPP_URL =
-  "https://n8n.eiu.vn/webhook-test/82bbf839-8656-4e50-b1a2-19fd896e43fa"; // ⚠️ UPDATE URL TỪ MANAGE DEPLOYMENTS
+  (typeof CONFIG !== "undefined" && CONFIG.N8N_WEBHOOK_URL) ||
+  "https://n8n.eiu.vn/webhook/82bbf839-8656-4e50-b1a2-19fd896e43fa";
 
 // Tên sheet cần theo dõi
 const PHIEU_NHAP_SHEET = "Phiếu nhập";

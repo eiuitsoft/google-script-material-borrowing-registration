@@ -44,7 +44,7 @@
             <input
               type="text"
               id="loadIdDexuat"
-              placeholder="VD: NUR101-ABC123XYZ"
+              placeholder="Ví dụ: XKGS_130426_001 hoặc XKDCGS_130426_012"
               class="input-mt-4"
             />
             <div class="hint hint-note">
@@ -129,7 +129,7 @@
                 type="text"
                 id="hocKy"
                 required
-                placeholder="VD: HK1 (2025-2026)"
+                placeholder="Ví dụ: HK1 (2025-2026)"
                 class="w-full"
               />
               <div class="error-msg" id="err-hocKy">
@@ -189,7 +189,7 @@
               <input
                 type="text"
                 id="giangVien"
-                placeholder="Tên người đăng ký"
+                placeholder="Tự động điền từ tài khoản đăng nhập"
                 readonly
               />
               <div class="hint">Tự động điền từ hệ thống</div>
@@ -199,7 +199,7 @@
               <input
                 type="email"
                 id="email"
-                placeholder="Email người đăng ký"
+                placeholder="Tự động điền từ tài khoản đăng nhập"
                 readonly
               />
               <div class="hint">Tự động điền từ hệ thống</div>
@@ -212,7 +212,7 @@
               <input
                 type="tel"
                 id="soDienThoai"
-                placeholder="0123456789"
+                placeholder="Nhập số điện thoại (10 chữ số)"
                 required
                 pattern="[0-9]{10}"
                 maxlength="10"
@@ -237,7 +237,7 @@
                 type="text"
                 id="giangVienPhuTrach"
                 required
-                placeholder="Nhập tên giảng viên phụ trách"
+                placeholder="Ví dụ: Nguyễn Văn A"
                 class="w-full"
               />
               <div class="error-msg" id="err-giangVienPhuTrach">
@@ -252,7 +252,7 @@
                 type="email"
                 id="emailGiangVienPhuTrach"
                 required
-                placeholder="name@eiu.edu.vn"
+                placeholder="Ví dụ: giangvien@eiu.edu.vn"
                 class="w-full"
               />
               <div class="error-msg" id="err-emailGiangVienPhuTrach">
@@ -339,7 +339,7 @@
 
         <div class="field-group hidden">
           <label for="ts">Thời gian gửi</label>
-          <input type="text" id="ts" readonly placeholder="Tự tạo khi gửi" />
+          <input type="text" id="ts" readonly placeholder="Tự động tạo khi gửi" />
           <div class="hint">Được tạo tự động khi gửi</div>
         </div>
       </div>
@@ -1006,7 +1006,7 @@
           <div class="kn-meta-row">
             <div class="flex-1">
               <label for="kyThuat${k}" class="required">Tên kỹ thuật/Bài thí nghiệm</label>
-              <input class="kyThuat" id="kyThuat${k}" list="dlKyThuat" required placeholder="Tên kỹ thuật/Bài thí nghiệm" value="${window.kyNangData[k]?.kyThuat || ""}">
+              <input class="kyThuat" id="kyThuat${k}" list="dlKyThuat" required placeholder="Nhập hoặc chọn tên kỹ thuật/bài thí nghiệm" value="${window.kyNangData[k]?.kyThuat || ""}">
             </div>
             <span class="pill row-count-pill" id="rowCount${k}"></span>
           </div>
@@ -1067,11 +1067,11 @@
         row.innerHTML = `
       <td class="center">${idx}</td>
       <td>
-        <input class="tenTB" list="${dlTenTBId}" required placeholder="Tên thiết bị" value="${rowData?.tenTB || ""}" autocomplete="off">
+        <input class="tenTB" list="${dlTenTBId}" required placeholder="Nhập hoặc chọn tên thiết bị" value="${rowData?.tenTB || ""}" autocomplete="off">
         <datalist id="${dlTenTBId}"></datalist>
       </td>
       <td>
-        <input class="tenThuongMai" list="${dlTenThuongMaiId}" required placeholder="Tên thương mại" value="${rowData?.tenThuongMai || ""}" autocomplete="off">
+        <input class="tenThuongMai" list="${dlTenThuongMaiId}" required placeholder="Nhập hoặc chọn tên thương mại" value="${rowData?.tenThuongMai || ""}" autocomplete="off">
         <datalist id="${dlTenThuongMaiId}"></datalist>
         <input type="hidden" class="loai" value="${rowData?.loai || ""}">
         <input type="hidden" class="nuoc" value="${rowData?.nuoc || ""}">
@@ -1079,13 +1079,13 @@
         <input type="hidden" class="model" value="${rowData?.model || ""}">
       </td>
       <td>
-        <input type="text" class="dvt dvt-readonly" placeholder="ĐVT" value="${rowData?.dvt || ""}" readonly>
+        <input type="text" class="dvt dvt-readonly" placeholder="Tự động điền" value="${rowData?.dvt || ""}" readonly>
       </td>
       <td class="right">
         <input type="number" class="sl" min="1" value="${rowData?.sl || 1}" required>
       </td>
       <td>
-        <input type="text" class="ghichu" placeholder="Ghi chú (nếu có)" value="${rowData?.ghichu || ""}">
+        <input type="text" class="ghichu" placeholder="Nhập ghi chú (nếu có)" value="${rowData?.ghichu || ""}">
       </td>
       <td class="center">
         <button onclick="delRow(this,${k})">✕</button>
