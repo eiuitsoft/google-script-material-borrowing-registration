@@ -13,8 +13,7 @@
 // Dùng chung webhook từ CONFIG nếu có (chạy cùng project),
 // fallback sang URL mặc định nếu file được copy chạy độc lập.
 const BOT_WEBAPP_URL =
-  (typeof CONFIG !== "undefined" && CONFIG.N8N_WEBHOOK_URL) ||
-  "https://n8n.eiu.vn/webhook/82bbf839-8656-4e50-b1a2-19fd896e43fa";
+  (typeof CONFIG !== "undefined" && CONFIG.N8N_WEBHOOK_URL);
 
 // Tên sheet cần theo dõi
 const PHIEU_NHAP_SHEET = "Phiếu nhập";
@@ -30,7 +29,6 @@ function onEdit(e) {
   try {
     // Check event object
     if (!e || !e.range) {
-      console.log("No event or range");
       return;
     }
 
@@ -39,7 +37,6 @@ function onEdit(e) {
 
     // Chỉ xử lý sheet "Phiếu nhập"
     if (sheetName !== PHIEU_NHAP_SHEET) {
-      console.log("Not Phieu nhap sheet, skip");
       return;
     }
 
@@ -47,7 +44,6 @@ function onEdit(e) {
 
     // Skip header row (row 106)
     if (row <= 106) {
-      console.log("Header row, skip");
       return;
     }
 
@@ -56,7 +52,6 @@ function onEdit(e) {
 
     // Check nếu có ID_Dexuat (cột A) - tức là row đã có data đầy đủ
     if (!rowData[0]) {
-      console.log("No ID_Dexuat, skip");
       return;
     }
 
@@ -69,7 +64,6 @@ function onEdit(e) {
 
       // Chỉ notify nếu tạo trong vòng 5 phút
       if (diffMinutes > 5) {
-        console.log("Old row (created " + diffMinutes + " minutes ago), skip");
         return;
       }
     }
@@ -90,12 +84,10 @@ function onEdit(e) {
       trangThai: rowData[11], // L: Trạng thái
     };
 
-    console.log("Detected new ticket: " + ticketData.id);
-
     // Gọi bot webhook
     notifyBot(ticketData);
   } catch (err) {
-    console.log("onEdit error: " + err.message);
+    Logger.log("onEdit error: " + err.message);
   }
 }
 
@@ -109,8 +101,7 @@ function notifyBot(ticketData) {
   try {
     // Check bot URL đã config chưa
     if (!BOT_WEBAPP_URL || BOT_WEBAPP_URL === "YOUR_BOT_WEBAPP_URL_HERE") {
-      console.log("ERROR: BOT_WEBAPP_URL chưa được config!");
-      console.log("Vui lòng cập nhật BOT_WEBAPP_URL ở đầu file NotifyBot.gs");
+      Logger.log("ERROR: BOT_WEBAPP_URL chưa được config!");
       return;
     }
 
@@ -121,9 +112,6 @@ function notifyBot(ticketData) {
       data: ticketData,
     };
 
-    console.log("Calling bot webhook: " + BOT_WEBAPP_URL);
-    console.log("Payload: " + JSON.stringify(payload));
-
     const response = UrlFetchApp.fetch(BOT_WEBAPP_URL, {
       method: "post",
       contentType: "application/json",
@@ -132,18 +120,11 @@ function notifyBot(ticketData) {
     });
 
     const responseCode = response.getResponseCode();
-    const responseText = response.getContentText();
-
-    console.log("Bot response code: " + responseCode);
-    console.log("Bot response: " + responseText);
-
-    if (responseCode === 200) {
-      console.log("✅ Bot notified successfully");
-    } else {
-      console.log("⚠️ Bot returned non-200 status: " + responseCode);
+    if (responseCode !== 200) {
+      Logger.log("notifyBot non-200 status: " + responseCode);
     }
   } catch (err) {
-    console.log("❌ notifyBot error: " + err.message);
+    Logger.log("notifyBot error: " + err.message);
   }
 }
 
@@ -177,7 +158,6 @@ function testNotifyBot() {
   const lastRow = sheet.getLastRow();
 
   if (lastRow <= 106) {
-    console.log("No data rows to test");
     return;
   }
 
@@ -185,7 +165,6 @@ function testNotifyBot() {
 
   // Check có ID không
   if (!rowData[0]) {
-    console.log("Row " + lastRow + " has no ID, try another row");
     return;
   }
 
@@ -203,9 +182,6 @@ function testNotifyBot() {
     ngayNhan: formatDate(rowData[10]),
     trangThai: rowData[11],
   };
-
-  console.log("🧪 TEST MODE - Forcing notification for row " + lastRow);
-  console.log("Ticket data: " + JSON.stringify(ticketData));
 
   // Gửi notification (bỏ qua check timestamp)
   notifyBot(ticketData);
@@ -222,14 +198,12 @@ function testDirectCallBot() {
   const lastRow = sheet.getLastRow();
 
   if (lastRow <= 106) {
-    console.log("No data rows to test");
     return;
   }
 
   const rowData = sheet.getRange(lastRow, 1, 1, 14).getValues()[0];
 
   if (!rowData[0]) {
-    console.log("Row " + lastRow + " has no ID");
     return;
   }
 
@@ -248,12 +222,11 @@ function testDirectCallBot() {
     trangThai: rowData[11],
   };
 
-  console.log("🧪 DIRECT CALL TEST - Row " + lastRow);
-  console.log("Ticket: " + ticketData.id + " - " + ticketData.giangVien);
-  console.log("");
-  console.log("⚠️ LƯU Ý: Bạn phải copy function này sang BOT script");
-  console.log("Và chạy nó từ BOT, không phải từ sheet nguồn!");
-  console.log("");
-  console.log("Copy code này sang DirectTest.gs của BOT:");
-  console.log("handleNewTicketFromSource(" + JSON.stringify(ticketData) + ");");
+  Logger.log("DIRECT CALL TEST - Row " + lastRow);
+  Logger.log("Ticket: " + ticketData.id + " - " + ticketData.giangVien);
+  Logger.log(
+    "Copy code sang BOT: handleNewTicketFromSource(" +
+      JSON.stringify(ticketData) +
+      ");",
+  );
 }

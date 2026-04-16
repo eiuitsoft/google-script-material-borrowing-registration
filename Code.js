@@ -4,7 +4,7 @@
 const CONFIG = {
   CATALOG_SHEET: "Danh mục",
   REQUEST_SHEET: "Đăng ký TB",
-  N8N_WEBHOOK_URL: "https://n8n.eiu.vn/webhook/82bbf839-8656-4e50-b1a2-19fd896e43fa",
+  N8N_WEBHOOK_URL: "https://n8n.eiu.vn/webhook-test/00bd269d-5ac0-4cb5-a4ea-e52b4e527a40",
   ALLOWED_DOMAIN: "eiu.edu.vn",
   SEND_USER_EMAIL: true,
   SEND_ADMIN_EMAIL: true,
@@ -271,6 +271,124 @@ function getN8nWebhookUrl_() {
   const configuredUrl = _trim(props.getProperty("N8N_WEBHOOK_URL") || "");
   if (configuredUrl) return configuredUrl;
   return CONFIG.N8N_WEBHOOK_URL;
+}
+
+function parseWebhookBody_(text) {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    return null;
+  }
+}
+
+function toReadableMessage_(value) {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
+  if (typeof value === "object") {
+    if (typeof value.message === "string") return value.message;
+    try {
+      return JSON.stringify(value);
+    } catch (e) {
+      return String(value);
+    }
+  }
+  return String(value);
+}
+
+function extractNestedApiMessage_(messageText) {
+  const raw = _trim(messageText || "");
+  if (!raw) return "";
+
+  const tryExtractFromObject = (obj) => {
+    const nested =
+      obj?.error?.message ||
+      obj?.message ||
+      obj?.error_description ||
+      obj?.details ||
+      "";
+    return _trim(nested || "");
+  };
+
+  // Trường hợp message là JSON string trực tiếp.
+  if (raw.startsWith("{") && raw.endsWith("}")) {
+    try {
+      const parsed = JSON.parse(raw);
+      const nested = tryExtractFromObject(parsed);
+      if (nested) return nested;
+    } catch (e) {}
+  }
+
+  // Dạng thường gặp từ n8n: 400 - "{\"error\":{\"message\":\"...\"}}"
+  // Bóc chuỗi JSON nhúng ở trong message.
+  const firstBrace = raw.indexOf("{");
+  const lastBrace = raw.lastIndexOf("}");
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    let embedded = raw.slice(firstBrace, lastBrace + 1);
+    for (let i = 0; i < 3; i++) {
+      try {
+        const parsed = JSON.parse(embedded);
+        const nested = tryExtractFromObject(parsed);
+        if (nested) return nested;
+      } catch (e) {
+        embedded = embedded
+          .replace(/\\"/g, '"')
+          .replace(/\\\\/g, "\\")
+          .replace(/^"+|"+$/g, "");
+      }
+    }
+  }
+
+  return raw;
+}
+
+function resolveAbpWebhookResult_(responseCode, responseText) {
+  const fallbackHeaders = arguments[2] || {};
+  const parsedBody = parseWebhookBody_(responseText);
+  const abpSuccess =
+    parsedBody && typeof parsedBody.IsSuccess === "boolean"
+      ? parsedBody.IsSuccess
+      : null;
+  const primaryMessage = parsedBody
+    ? parsedBody.Message ||
+      parsedBody.message ||
+      (parsedBody.error && parsedBody.error.message) ||
+      parsedBody.error ||
+      parsedBody.title
+    : responseText;
+  const message = extractNestedApiMessage_(toReadableMessage_(primaryMessage));
+  const headerMessage =
+    _trim(
+      fallbackHeaders["x-error-message"] ||
+        fallbackHeaders["X-Error-Message"] ||
+        fallbackHeaders["x-message"] ||
+        fallbackHeaders["X-Message"] ||
+        "",
+    ) || "";
+  const transactionNo =
+    (parsedBody && (parsedBody.TransactionNo || parsedBody.transactionNo)) || "";
+  const inventoryIssueId =
+    (parsedBody &&
+      (parsedBody.InventoryIssueId || parsedBody.inventoryIssueId)) ||
+    "";
+
+  const okByHttp = responseCode < 400;
+  const ok = abpSuccess === null ? okByHttp : okByHttp && abpSuccess;
+
+  return {
+    ok,
+    statusCode: responseCode,
+    message: message || headerMessage,
+    rawBody: responseText,
+    data: parsedBody,
+    abp: {
+      isSuccess: abpSuccess,
+      transactionNo: transactionNo,
+      inventoryIssueId: inventoryIssueId,
+    },
+  };
 }
 
 function formatDateToken_(date) {
@@ -740,6 +858,7 @@ function submitRegistration(payload) {
   const transactionType = _trim(meta.transactionType) || "XUAT_NHAP_KHO";
   const sourceChannel = "GOOGLE_SCRIPT";
   let submitUniqueId;
+  let rowsToDelete = [];
   if (payload.oldIdDexuat && typeof payload.oldIdDexuat === "string") {
     submitUniqueId = payload.oldIdDexuat;
     meta.idDexuat = generateTransactionNo_(sh, {
@@ -752,16 +871,10 @@ function submitRegistration(payload) {
     const allRows = sh.getDataRange().getValues();
     const idDexuatCol = REQUEST_HEADERS_ATOZ.indexOf("ID_Dexuat");
     if (idDexuatCol >= 0) {
-      const rowsToDelete = [];
       for (let i = 1; i < allRows.length; i++) {
         const cellValue = _trim(String(allRows[i][idDexuatCol] || ""));
         const searchValue = _trim(String(payload.oldIdDexuat));
         if (cellValue === searchValue) rowsToDelete.push(i + 1);
-      }
-      if (rowsToDelete.length > 0) {
-        rowsToDelete
-          .sort((a, b) => b - a)
-          .forEach((rowNum) => sh.deleteRow(rowNum));
       }
     }
   } else {
@@ -794,6 +907,91 @@ function submitRegistration(payload) {
     const stt = ++nextSTT;
     rows.push(buildRequestRow_(stt, meta, it, now, submitUniqueId));
   });
+
+  // ==========================================
+  // --- TÍCH HỢP BẮN WEBHOOK SANG N8N ---
+  // ==========================================
+  let webhookResult = {
+    ok: false,
+    statusCode: 0,
+    message: "",
+    rawBody: "",
+  };
+
+  try {
+    const n8nWebhookUrl = getN8nWebhookUrl_();
+
+    // Cấu trúc Data JSON đẩy sang n8n
+    const n8nPayload = {
+      event_type: payload.oldIdDexuat
+        ? "update_registration"
+        : "new_registration",
+      timestamp: new Date().toISOString(),
+      idDexuat: meta.idDexuat,
+      transactionNo: meta.idDexuat,
+      transactionType: transactionType,
+      sourceChannel: sourceChannel,
+      meta: meta, // Dữ liệu Đơn vị và Kho đã nằm trong `meta` nếu bạn gửi từ `index.html`
+      items: payload.items,
+      source: "EIU_Equipment_System",
+      user: user.email,
+    };
+
+    const options = {
+      method: "post",
+      contentType: "application/json",
+      payload: JSON.stringify(n8nPayload),
+      muteHttpExceptions: true,
+    };
+
+    const response = UrlFetchApp.fetch(n8nWebhookUrl, options);
+    const responseCode = response.getResponseCode();
+    const responseText = response.getContentText();
+    const responseHeaders = response.getAllHeaders() || {};
+
+    webhookResult = resolveAbpWebhookResult_(
+      responseCode,
+      responseText,
+      responseHeaders,
+    );
+    
+    if (!webhookResult.ok) {
+      throw new Error(
+        webhookResult.message || `Webhook trả về lỗi HTTP ${responseCode}.`,
+      );
+    }
+  } catch (err) {
+    const errMsg = err && err.message ? err.message : String(err);
+    const detailFromBody = extractNestedApiMessage_(webhookResult.rawBody || "");
+    const resolvedMessage =
+      webhookResult.message || detailFromBody || errMsg || "";
+    webhookResult = {
+      ok: false,
+      statusCode: webhookResult.statusCode || 0,
+      message: resolvedMessage,
+      rawBody: webhookResult.rawBody || "",
+      data: webhookResult.data || null,
+    };
+    Logger.log("❌ Lỗi khi gửi tới n8n: " + errMsg);
+  }
+  // ==========================================
+
+  // Chỉ lưu phiếu và gửi thông báo khi đồng bộ ABP thành công.
+  if (!webhookResult.ok) {
+    const finalErrorMessage =
+      webhookResult.message ||
+      extractNestedApiMessage_(webhookResult.rawBody || "") ||
+      "Đồng bộ API ABP thất bại, hệ thống không lưu phiếu.";
+    throw new Error(
+      finalErrorMessage,
+    );
+  }
+
+  if (rowsToDelete.length > 0) {
+    rowsToDelete
+      .sort((a, b) => b - a)
+      .forEach((rowNum) => sh.deleteRow(rowNum));
+  }
 
   if (rows.length)
     sh.getRange(
@@ -872,55 +1070,14 @@ function submitRegistration(payload) {
     });
   }
 
-  // ==========================================
-  // --- TÍCH HỢP BẮN WEBHOOK SANG N8N ---
-  // ==========================================
-  try {
-    const n8nWebhookUrl = getN8nWebhookUrl_();
-
-    // Cấu trúc Data JSON đẩy sang n8n
-    const n8nPayload = {
-      event_type: payload.oldIdDexuat
-        ? "update_registration"
-        : "new_registration",
-      timestamp: new Date().toISOString(),
-      idDexuat: meta.idDexuat,
-      transactionNo: meta.idDexuat,
-      transactionType: transactionType,
-      sourceChannel: sourceChannel,
-      meta: meta, // Dữ liệu Đơn vị và Kho đã nằm trong `meta` nếu bạn gửi từ `index.html`
-      items: payload.items,
-      source: "EIU_Equipment_System",
-      user: user.email,
-    };
-
-    const options = {
-      method: "post",
-      contentType: "application/json",
-      payload: JSON.stringify(n8nPayload),
-      muteHttpExceptions: true,
-    };
-
-    const response = UrlFetchApp.fetch(n8nWebhookUrl, options);
-    const responseCode = response.getResponseCode();
-    const responseText = response.getContentText();
-
-    Logger.log(
-      `N8N webhook response: code=${responseCode}, body=${responseText}`,
-    );
-
-    if (responseCode >= 400) {
-      throw new Error(
-        `Webhook trả về lỗi HTTP ${responseCode}. Body: ${responseText}`,
-      );
-    }
-    Logger.log("✅ Đã bắn webhook sang n8n thành công");
-  } catch (err) {
-    Logger.log("❌ Lỗi khi gửi tới n8n: " + err.toString());
-  }
-  // ==========================================
-
-  return { ok: true, count: rows.length, idDexuat: meta.idDexuat };
+  return {
+    ok: true,
+    count: rows.length,
+    idDexuat: meta.idDexuat,
+    transactionNo:
+      (webhookResult.abp && webhookResult.abp.transactionNo) || meta.idDexuat,
+    webhook: webhookResult,
+  };
 }
 
 function buildEmailText(meta, items) {

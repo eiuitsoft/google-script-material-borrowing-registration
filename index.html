@@ -500,8 +500,6 @@
               kyThuat: null,
             };
 
-            // Log USER_INFO để debug
-            console.log("✅ USER_INFO loaded:", USER_INFO);
 
             // Lấy cài đặt admin để áp dụng ẩn/bắt buộc cho các trường
             google.script.run
@@ -512,11 +510,6 @@
               .getAdminSettings();
 
             buildDatalists();
-            console.log(
-              "✅ Datalists built with",
-              DANH_MUC_DATA.length,
-              "items",
-            );
             // KHÔNG gọi initTable() ở đây - chỉ gọi khi bấm nút "Tạo bảng thiết bị"
 
             // Tự động điền thông tin user
@@ -532,7 +525,6 @@
               document.getElementById("emailGiangVienPhuTrach").value =
                 USER_INFO.email;
             }
-            console.log("✅ Auto-filled user info from session");
           })
           .getLookupsForClient();
 
@@ -811,20 +803,6 @@
               DANH_MUC_DATA.map((x) => x.kyThuat || "").filter(Boolean),
             ),
           ].sort();
-          console.log("✅ Built datalist cache:", {
-            tenTB: CACHED_DATALISTS.tenTB.length,
-            tenThuongMai: CACHED_DATALISTS.tenThuongMai.length,
-            loai: CACHED_DATALISTS.loai.length,
-            nuocSX: CACHED_DATALISTS.nuocSX.length,
-            hang: CACHED_DATALISTS.hang.length,
-            ncc: CACHED_DATALISTS.ncc.length,
-            dvt: CACHED_DATALISTS.dvt.length,
-            loaiMonHoc: CACHED_DATALISTS.loaiMonHoc.length,
-            maMonHoc: CACHED_DATALISTS.maMonHoc.length,
-            tenMonHoc: CACHED_DATALISTS.tenMonHoc.length,
-            phong: CACHED_DATALISTS.phong.length,
-            kyThuat: CACHED_DATALISTS.kyThuat.length,
-          });
         }
 
         let dlTenTB = document.getElementById("dlTenTB");
@@ -1103,14 +1081,6 @@
         const dvtInput = row.querySelector(".dvt");
 
         // Khởi tạo datalist với tất cả options
-        console.log(
-          "🔧 Initializing datalists for row",
-          idx,
-          "in table",
-          k,
-          "- DANH_MUC_DATA length:",
-          DANH_MUC_DATA?.length || 0,
-        );
         updateTenTBDatalist(dlTenTBId, "");
         updateTenThuongMaiDatalist(dlTenThuongMaiId, "");
 
@@ -1281,11 +1251,6 @@
 
       // Hàm refresh tất cả datalists trong các bảng đã tạo
       function refreshAllDatalists() {
-        console.log(
-          "🔄 Refreshing all datalists with",
-          DANH_MUC_DATA?.length || 0,
-          "items",
-        );
 
         // Tìm tất cả các datalist có id dạng dlTenTB_* hoặc dlTenThuongMai_*
         const allDataLists = document.querySelectorAll(
@@ -1301,7 +1266,6 @@
           }
         });
 
-        console.log("✅ Refreshed", allDataLists.length, "datalists");
       }
 
       // Hiển thị popup cho user chọn khi có nhiều kết quả
@@ -1439,7 +1403,6 @@
       function submitForm() {
         // Prevent double submit
         if (IS_SUBMITTING) {
-          console.log("⚠️ Already submitting...");
           return;
         }
 
@@ -1715,12 +1678,6 @@
           const payload = { meta, items };
           if (window.LAST_ID_DEXUAT) {
             payload.oldIdDexuat = window.LAST_ID_DEXUAT;
-            console.log(
-              "📝 Đang gửi lại với oldIdDexuat:",
-              window.LAST_ID_DEXUAT,
-            );
-          } else {
-            console.log("✨ Đang gửi mới (không có oldIdDexuat)");
           }
 
           // Set submitting flag
@@ -1737,17 +1694,17 @@
               submitBtn.classList.remove("loading");
               submitBtn.textContent = "Gửi đăng ký";
               if (res && res.ok) {
+                const createdNo = res.transactionNo || res.idDexuat || "";
                 msgOk(
-                  "✅ Bạn đã đăng ký thành công! Vui lòng kiểm tra email xác nhận.",
+                  createdNo
+                    ? `✅ Gửi phiếu thành công. Mã phiếu của bạn: ${createdNo}`
+                    : "✅ Gửi phiếu thành công.",
                 );
                 document.getElementById("ts").value = new Date().toLocaleString(
                   "vi-VN",
                 );
                 if (res.idDexuat) {
                   window.LAST_ID_DEXUAT = res.idDexuat;
-                  console.log("💾 Đã lưu LAST_ID_DEXUAT:", res.idDexuat);
-                } else {
-                  console.log("⚠️ Response không có idDexuat:", res);
                 }
                 // Không hiển thị popup sau khi gửi - user có thể dùng nút "Chỉnh sửa phiếu" nếu cần
               } else {
@@ -1759,40 +1716,46 @@
               submitBtn.disabled = false;
               submitBtn.classList.remove("loading");
               submitBtn.textContent = "Gửi đăng ký";
-              let errorMsg = "❌ Có lỗi khi gửi biểu mẫu.";
-              if (err) {
-                if (typeof err === "string") {
-                  if (err.includes("timeout") || err.includes("timed out")) {
-                    errorMsg =
-                      "⏱️ Kết nối chậm hoặc timeout. Vui lòng thử lại.";
-                  } else if (
-                    err.includes("permission") ||
-                    err.includes("quyền")
-                  ) {
-                    errorMsg =
-                      "🔒 Không có quyền truy cập. Vui lòng đăng nhập lại.";
-                  } else {
-                    errorMsg = "❌ " + err;
-                  }
-                } else if (err.message) {
-                  if (
-                    err.message.includes("timeout") ||
-                    err.message.includes("timed out")
-                  ) {
-                    errorMsg =
-                      "⏱️ Kết nối chậm hoặc timeout. Vui lòng thử lại.";
-                  } else if (
-                    err.message.includes("permission") ||
-                    err.message.includes("quyền")
-                  ) {
-                    errorMsg =
-                      "🔒 Không có quyền truy cập. Vui lòng đăng nhập lại.";
-                  } else {
-                    errorMsg = "❌ " + err.message;
+              const apiMessage =
+                typeof err === "string"
+                  ? err
+                  : err && err.message
+                    ? err.message
+                    : "";
+              const cleanedMessage = apiMessage.replace(/^Error:\s*/i, "").trim();
+              let displayMessage = cleanedMessage;
+
+              // Parse lỗi dạng: 400 - "{\"error\":{\"message\":\"...\"}}"
+              const firstBrace = cleanedMessage.indexOf("{");
+              const lastBrace = cleanedMessage.lastIndexOf("}");
+              if (firstBrace >= 0 && lastBrace > firstBrace) {
+                let embedded = cleanedMessage.slice(firstBrace, lastBrace + 1);
+                for (let i = 0; i < 3; i++) {
+                  try {
+                    const parsed = JSON.parse(embedded);
+                    const nestedMessage =
+                      (parsed &&
+                        parsed.error &&
+                        parsed.error.message) ||
+                      parsed.message ||
+                      "";
+                    if (nestedMessage) {
+                      displayMessage = String(nestedMessage).trim();
+                      break;
+                    }
+                  } catch (e) {
+                    embedded = embedded
+                      .replace(/\\"/g, '"')
+                      .replace(/\\\\/g, "\\")
+                      .replace(/^"+|"+$/g, "");
                   }
                 }
               }
-              msgErr(errorMsg);
+              msgErr(
+                displayMessage
+                  ? `❌ Gửi phiếu thất bại: ${displayMessage}`
+                  : "❌ Gửi phiếu thất bại. Vui lòng thử lại.",
+              );
 
               // Retry option
               if (confirm("❓ Có muốn thử gửi lại không?")) {
