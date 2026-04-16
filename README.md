@@ -100,3 +100,52 @@ Project cần các sheet sau để chạy đúng:
 ## Tích hợp webhook (n8n)
 
 Dữ liệu phiếu được chuẩn hóa và gửi tới **n8n** bằng **POST** (JSON). URL webhook được cấu hình trong code (Apps Script); cập nhật URL sau mỗi lần đổi endpoint hoặc môi trường n8n.
+
+### Cấu hình Respond to Webhook (khuyến nghị production)
+
+Để Apps Script hiển thị đúng trạng thái thành công/thất bại và message từ API ABP, cấu hình node **Respond to Webhook** như sau:
+
+- **Respond With:** `JSON`
+- **Response Body:**
+
+```js
+{{ $json.error ? { isSuccess: false, message: $json.error.message || $json.error.description } : $json }}
+```
+
+- **Response Code:**
+
+```js
+{{ $json.error ? 400 : 200 }}
+```
+
+> Không dùng `{{ $json }}` cho **Response Code** vì đây là object, không phải mã HTTP.
+
+### Quy ước response từ ABP/n8n
+
+Nên trả về body theo schema thống nhất:
+
+```json
+{
+  "isSuccess": true,
+  "message": "Gửi yêu cầu thành công! Mã phiếu xuất kho của bạn là: XKGS_160426_005",
+  "inventoryIssueId": "GUID",
+  "transactionNo": "XKGS_160426_005",
+  "totalAmount": 0
+}
+```
+
+Nếu lỗi:
+
+```json
+{
+  "isSuccess": false,
+  "message": "Nội dung lỗi cụ thể từ API ABP"
+}
+```
+
+### Hành vi hệ thống hiện tại
+
+- Chỉ lưu phiếu vào Google Sheets khi đồng bộ API ABP thành công.
+- Thông báo cho người dùng:
+  - Thành công: hiển thị mã phiếu vừa tạo (`transactionNo`).
+  - Thất bại: hiển thị trực tiếp `message` lỗi từ API.

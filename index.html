@@ -20,13 +20,13 @@
           id="btnToggleLoadForm"
           class="btn btn-warning nowrap"
         >
-          ✏️ Chỉnh sửa phiếu
+          📝 Chỉnh sửa phiếu
         </button>
         <button
           id="btnCollapseLoadForm"
           class="btn btn-secondary nowrap hidden"
         >
-          ▲ Thu gọn
+          ⬆️ Thu gọn
         </button>
       </div>
 
@@ -346,14 +346,14 @@
       </div>
 
       <div class="table-action-wrap">
-        <button id="btnAddTable" class="btn">+ Tạo bảng thiết bị</button>
+        <button id="btnAddTable" class="btn">➕ Tạo bảng thiết bị</button>
       </div>
       <div id="kyNangTables"></div>
 
       <div id="submitToolbar" class="submit-toolbar hidden">
         <div class="toolbar">
-          <button id="btnReset">Xóa trắng</button>
-          <button class="btn" id="btnSubmit">Gửi đăng ký</button>
+          <button id="btnReset">🗑️ Xóa trắng</button>
+          <button class="btn" id="btnSubmit">📤 Gửi đăng ký</button>
         </div>
       </div>
     </div>
@@ -1013,7 +1013,7 @@
           tableWrap.innerHTML = `
           <div class="kn-head-row">
             <b>Kỹ năng/Bài thực hành #${k + 1}</b>
-            <button class="btn btn-danger" id="btnDelTable${k}">X</button>
+            <button class="btn btn-danger" id="btnDelTable${k}">🗑️ Xóa bảng</button>
           </div>
           <div class="kn-meta-row">
             <div class="flex-1">
@@ -1038,7 +1038,7 @@
             <tfoot>
               <tr>
                 <td colspan="6" class="center add">
-                  <button id="btnAdd${k}">+ Thêm dòng</button>
+                  <button id="btnAdd${k}">➕ Thêm dòng</button>
                 </td>
               </tr>
             </tfoot>
@@ -1100,7 +1100,7 @@
         <input type="text" class="ghichu" placeholder="Nhập ghi chú (nếu có)" value="${rowData?.ghichu || ""}">
       </td>
       <td class="center">
-        <button onclick="delRow(this,${k})">✕</button>
+        <button onclick="delRow(this,${k})">🗑️</button>
       </td>
     `;
         tb.appendChild(row);
@@ -1332,13 +1332,13 @@
         <td class="selection-cell">${escapeHtml(match.loai || "")}</td>
         <td class="selection-cell">${escapeHtml(match.ncc || "")}</td>
         <td class="selection-cell center">
-          <button class="select-btn btn-popup-select" data-idx="${idx}">Chọn</button>
+          <button class="select-btn btn-popup-select" data-idx="${idx}">✅ Chọn</button>
         </td>
       </tr>`;
         });
         html += "</tbody></table>";
         html +=
-          '<button id="cancelSelection" class="btn-popup-cancel">Hủy</button>';
+          '<button id="cancelSelection" class="btn-popup-cancel">❌ Hủy</button>';
 
         popup.innerHTML = html;
         document.body.appendChild(popup);
