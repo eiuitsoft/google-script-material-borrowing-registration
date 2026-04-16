@@ -275,8 +275,20 @@ function getN8nWebhookUrl_() {
 
 function parseWebhookBody_(text) {
   if (!text) return null;
+  let current = text;
+  for (let i = 0; i < 3; i++) {
+    if (typeof current !== "string") return current;
+    const trimmed = current.trim();
+    if (!trimmed) return null;
+    try {
+      current = JSON.parse(trimmed);
+      continue;
+    } catch (e) {
+      return i === 0 ? null : current;
+    }
+  }
   try {
-    return JSON.parse(text);
+    return current;
   } catch (e) {
     return null;
   }
@@ -346,11 +358,29 @@ function extractNestedApiMessage_(messageText) {
 
 function resolveAbpWebhookResult_(responseCode, responseText) {
   const fallbackHeaders = arguments[2] || {};
-  const parsedBody = parseWebhookBody_(responseText);
-  const abpSuccess =
-    parsedBody && typeof parsedBody.IsSuccess === "boolean"
+  const parsedRaw = parseWebhookBody_(responseText);
+  const reparsedRaw =
+    typeof parsedRaw === "string" ? parseWebhookBody_(parsedRaw) : parsedRaw;
+  const parsedBody = Array.isArray(reparsedRaw)
+    ? reparsedRaw[0] || null
+    : reparsedRaw;
+  const toBooleanOrNull = (v) => {
+    if (typeof v === "boolean") return v;
+    if (typeof v === "number") return v === 1 ? true : v === 0 ? false : null;
+    if (typeof v === "string") {
+      const t = v.trim().toLowerCase();
+      if (t === "true" || t === "1") return true;
+      if (t === "false" || t === "0") return false;
+    }
+    return null;
+  };
+  const successRaw =
+    parsedBody && parsedBody.IsSuccess !== undefined
       ? parsedBody.IsSuccess
-      : null;
+      : parsedBody && parsedBody.isSuccess !== undefined
+        ? parsedBody.isSuccess
+        : null;
+  const abpSuccess = toBooleanOrNull(successRaw);
   const primaryMessage = parsedBody
     ? parsedBody.Message ||
       parsedBody.message ||
@@ -375,7 +405,8 @@ function resolveAbpWebhookResult_(responseCode, responseText) {
     "";
 
   const okByHttp = responseCode < 400;
-  const ok = abpSuccess === null ? okByHttp : okByHttp && abpSuccess;
+  // Nếu API đã trả cờ thành công rõ ràng thì ưu tiên cờ đó.
+  const ok = abpSuccess === null ? okByHttp : abpSuccess;
 
   return {
     ok,
@@ -957,7 +988,7 @@ function submitRegistration(payload) {
     
     if (!webhookResult.ok) {
       throw new Error(
-        webhookResult.message || `Webhook trả về lỗi HTTP ${responseCode}.`,
+        webhookResult.message || `Đã xảy ra lỗi trong quá trình đồng bộ dữ liệu lên hệ thống [eiu-asset.eiu.vn] ${responseCode}.`,
       );
     }
   } catch (err) {

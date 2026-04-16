@@ -5,6 +5,7 @@
     <title>Đăng ký Trang thiết bị</title>
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <?!= include('styles'); ?>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
   <body>
     <div class="wrap">
@@ -696,11 +697,44 @@
       }
 
       function msgOk(s) {
+        if (window.Swal && typeof window.Swal.fire === "function") {
+          Swal.fire({
+            icon: "success",
+            title: "Thành công",
+            text: s,
+            confirmButtonText: "Đóng",
+            confirmButtonColor: "#2563eb",
+          });
+          return;
+        }
         document.getElementById("msg").innerHTML = `<div class="ok">${s}</div>`;
       }
       function msgErr(s) {
-        document.getElementById("msg").innerHTML =
-          `<div class="err">${s}</div>`;
+        if (window.Swal && typeof window.Swal.fire === "function") {
+          Swal.fire({
+            icon: "error",
+            title: "Thất bại",
+            text: s,
+            confirmButtonText: "Đóng",
+            confirmButtonColor: "#dc2626",
+          });
+          return;
+        }
+        document.getElementById("msg").innerHTML = `<div class="err">${s}</div>`;
+      }
+      async function confirmSwal(title, text, confirmText = "Đồng ý") {
+        if (!(window.Swal && typeof window.Swal.fire === "function")) return false;
+        const result = await Swal.fire({
+          icon: "question",
+          title,
+          text,
+          showCancelButton: true,
+          confirmButtonText: confirmText,
+          cancelButtonText: "Hủy",
+          confirmButtonColor: "#2563eb",
+          cancelButtonColor: "#6b7280",
+        });
+        return !!result.isConfirmed;
       }
       function clearMsg() {
         document.getElementById("msg").innerHTML = "";
@@ -1400,7 +1434,7 @@
         window.LAST_ID_DEXUAT = null;
       }
 
-      function submitForm() {
+      async function submitForm() {
         // Prevent double submit
         if (IS_SUBMITTING) {
           return;
@@ -1632,11 +1666,12 @@
             const dupList = duplicates
               .map((d) => `- ${d.name} (${d.kyThuat})`)
               .join("\n");
-            if (
-              !confirm(
-                `⚠️ Phát hiện ${duplicates.length} thiết bị bị trùng:\n\n${dupList}\n\nTiếp tục gửi?`,
-              )
-            ) {
+            const shouldContinue = await confirmSwal(
+              "Phát hiện thiết bị bị trùng",
+              `${duplicates.length} thiết bị trùng:\n\n${dupList}\n\nBạn có muốn tiếp tục gửi không?`,
+              "Tiếp tục gửi",
+            );
+            if (!shouldContinue) {
               return;
             }
           }
@@ -1650,7 +1685,12 @@
             `📦 Tổng số thiết bị: ${items.length}\n` +
             `\nBạn có chắc chắn muốn gửi?`;
 
-          if (!confirm(summary)) {
+          const shouldSubmit = await confirmSwal(
+            "Xác nhận gửi phiếu",
+            `Ngày học: ${ngayHoc}\nGiờ học: ${gioBatDau} - ${gioKetThuc}\nPhòng/Lab: ${phong}\nTổng số thiết bị: ${items.length}`,
+            "Gửi phiếu",
+          );
+          if (!shouldSubmit) {
             return;
           }
 
@@ -1757,11 +1797,6 @@
                   : "❌ Gửi phiếu thất bại. Vui lòng thử lại.",
               );
 
-              // Retry option
-              if (confirm("❓ Có muốn thử gửi lại không?")) {
-                IS_SUBMITTING = false;
-                submitForm();
-              }
             })
             .submitRegistration(payload);
         } catch (e) {
