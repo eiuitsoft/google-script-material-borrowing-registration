@@ -450,7 +450,7 @@
         (khoList || []).forEach((k) => {
           const opt = document.createElement("option");
           opt.value = k.code;
-          opt.textContent = `${k.code} - ${k.name}`;
+          opt.textContent = `${k.name}`;
           opt.dataset.id = k.id || "";
           khoSelect.appendChild(opt);
         });

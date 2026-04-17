@@ -4,7 +4,7 @@
 const CONFIG = {
   CATALOG_SHEET: "Danh mục",
   REQUEST_SHEET: "Đăng ký TB",
-  N8N_WEBHOOK_URL: "https://n8n.eiu.vn/webhook-test/00bd269d-5ac0-4cb5-a4ea-e52b4e527a40",
+  N8N_WEBHOOK_URL: "https://n8n.eiu.vn/webhook/00bd269d-5ac0-4cb5-a4ea-e52b4e527a40",
   LOOKUP_API_BASE_URL: "https://gatewayuat.eiu.vn",
   LOOKUP_API_KEY: "EIUZx88nhEaNQOjOt1ePm42BmVvggDOD8i3",
   LOOKUP_API_KEY_HEADER: "X-API-KEY",
