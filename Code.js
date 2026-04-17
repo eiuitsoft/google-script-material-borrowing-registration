@@ -392,8 +392,9 @@ function mapOrganizationsFromApi_(rows) {
           r.displayName ||
           "",
       );
+      const id = _trim(r.id || r.Id || "");
       if (!code && !name) return "";
-      return JSON.stringify({ code: code || name, name: name || code });
+      return JSON.stringify({ id, code: code || name, name: name || code });
     }),
   ).map((x) => JSON.parse(x));
 }
@@ -407,8 +408,9 @@ function mapWarehousesFromApi_(rows) {
       const name = _trim(
         r.name || r.Name || r.warehouseName || r.WarehouseName || "",
       );
+      const id = _trim(r.id || r.Id || "");
       if (!code && !name) return "";
-      return JSON.stringify({ code: code || name, name: name || code });
+      return JSON.stringify({ id, code: code || name, name: name || code });
     }),
   ).map((x) => JSON.parse(x));
 }
@@ -422,20 +424,11 @@ function mapItemsByWarehouseFromApi_(rows) {
       if (!tenTB) return null;
       return {
         id: _trim(r.id || r.Id || ""),
+        unitId: _trim(r.unitId || r.UnitId || ""),
         code: _trim(r.code || r.Code || ""),
         tenTB: tenTB,
         tenThuongMai: _trim(r.printName || r.PrintName || ""),
         dvt: _trim(r.unitName || r.UnitName || ""),
-        loai: "",
-        nuocSX: "",
-        hang: "",
-        ncc: "",
-        loaiMonHoc: "",
-        maMonHoc: "",
-        tenMonHoc: "",
-        loaiLab: "",
-        phong: "",
-        kyThuat: "",
       };
     })
     .filter(Boolean);
@@ -623,10 +616,26 @@ function resolveAbpWebhookResult_(responseCode, responseText) {
     (parsedBody &&
       (parsedBody.InventoryIssueId || parsedBody.inventoryIssueId)) ||
     "";
+  const errorCode = _trim(
+    (parsedBody &&
+      (parsedBody.code ||
+        parsedBody.Code ||
+        (parsedBody.error && (parsedBody.error.code || parsedBody.error.Code)))) ||
+      "",
+  );
+  const hasErrorObject = !!(
+    parsedBody &&
+    (parsedBody.error ||
+      parsedBody.Error ||
+      errorCode ||
+      (typeof parsedBody.name === "string" &&
+        parsedBody.name.toLowerCase() === "error"))
+  );
 
   const okByHttp = responseCode < 400;
   // Nếu API đã trả cờ thành công rõ ràng thì ưu tiên cờ đó.
-  const ok = abpSuccess === null ? okByHttp : abpSuccess;
+  const okFromFlag = abpSuccess === null ? okByHttp : abpSuccess;
+  const ok = okFromFlag && !hasErrorObject;
 
   return {
     ok,
@@ -636,6 +645,7 @@ function resolveAbpWebhookResult_(responseCode, responseText) {
     data: parsedBody,
     abp: {
       isSuccess: abpSuccess,
+      errorCode: errorCode,
       transactionNo: transactionNo,
       inventoryIssueId: inventoryIssueId,
     },
@@ -981,6 +991,19 @@ function ensureRequestSheetHeaders_(sh) {
   sh.getRange("AH:AH").setNumberFormat("HH:mm");
 }
 
+/** Dữ liệu dòng gửi n8n (ABP) — gọn, đúng khóa để lưu DB */
+function buildN8nWebhookItems_(items) {
+  return (items || []).map((it) => ({
+    itemId: _trim(it.itemId || ""),
+    unitId: _trim(it.unitId || ""),
+    ghiChu: _trim(it.ghiChu || ""),
+    tenThietBi: _trim(it.tenThietBi || ""),
+    tenThuongMai: _trim(it.tenThuongMai || ""),
+    soLuong: Number(it.soLuong),
+    kyThuat: _trim(it.kyThuat || ""),
+  }));
+}
+
 function buildRequestRow_(stt, meta, it, now, submitUniqueId) {
   const ngayHoc = parseAnyDate(meta.ngayHoc);
   const ngayNhan = parseAnyDate(meta.ngayNhan);
@@ -1181,8 +1204,8 @@ function submitRegistration(payload) {
       transactionNo: meta.idDexuat,
       transactionType: transactionType,
       sourceChannel: sourceChannel,
-      meta: meta, // Dữ liệu Đơn vị và Kho đã nằm trong `meta` nếu bạn gửi từ `index.html`
-      items: payload.items,
+      meta: meta, // Gồm donViCoSo, khoXuat, organizationId, warehouseId, ...
+      items: buildN8nWebhookItems_(payload.items),
       source: "EIU_Equipment_System",
       user: user.email,
     };
@@ -1512,7 +1535,6 @@ function getAdminSettings() {
   const defaults = {
     formTitle: "PHIẾU ĐĂNG KÝ TRANG THIẾT BỊ THỰC HÀNH - KHOA ĐIỀU DƯỠNG",
     showLogo: "true",
-    logoUrl: "https://drive.google.com/uc?id=1-hzToSdzLBTUQoeP0iwGOyCAZlMEGdcZ",
     defaultStartRows: "3",
     maxRows: "50",
     requiredFields: "ngayHoc,gioHoc,maHocPhan,phongLab,soDienThoai",

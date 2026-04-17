@@ -135,6 +135,57 @@
     margin-top: 12px;
     flex-wrap: wrap;
   }
+  .api-loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    padding: 16px;
+  }
+  .api-loading-overlay.show {
+    display: flex;
+  }
+  .api-loading-card {
+    width: min(420px, 100%);
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    box-shadow: 0 24px 48px rgba(2, 6, 23, 0.25);
+    padding: 22px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .api-loading-spinner {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    border: 3px solid rgba(37, 99, 235, 0.2);
+    border-top-color: #2563eb;
+    animation: api-spin 0.8s linear infinite;
+    flex: 0 0 42px;
+  }
+  .api-loading-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: 2px;
+  }
+  .api-loading-text {
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.4;
+  }
+  @keyframes api-spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
   button {
     padding: 10px 14px;
     border: 1px solid var(--bd);

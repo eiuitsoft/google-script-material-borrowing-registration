@@ -392,27 +392,36 @@
       let API_LOADING_COUNT = 0;
       let LAST_SELECTED_ORG_CODE = "";
       let LAST_SELECTED_WAREHOUSE_CODE = "";
+      let API_LOADING_OVERLAY = null;
+
+      function ensureApiLoadingOverlay() {
+        if (API_LOADING_OVERLAY) return API_LOADING_OVERLAY;
+        const overlay = document.createElement("div");
+        overlay.className = "api-loading-overlay";
+        overlay.innerHTML = `
+          <div class="api-loading-card" role="status" aria-live="polite">
+            <div class="api-loading-spinner"></div>
+            <div class="api-loading-title">Đang xử lý dữ liệu</div>
+            <div class="api-loading-text" id="apiLoadingText">Vui lòng chờ trong giây lát...</div>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+        API_LOADING_OVERLAY = overlay;
+        return overlay;
+      }
 
       function beginApiLoading(text) {
         API_LOADING_COUNT += 1;
-        if (window.Swal && typeof window.Swal.fire === "function") {
-          Swal.fire({
-            title: text || "Đang tải dữ liệu...",
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-            didOpen: () => {
-              Swal.showLoading();
-            },
-          });
-        }
+        const overlay = ensureApiLoadingOverlay();
+        const txt = overlay.querySelector("#apiLoadingText");
+        if (txt) txt.textContent = text || "Đang tải dữ liệu...";
+        overlay.classList.add("show");
       }
 
       function endApiLoading() {
         API_LOADING_COUNT = Math.max(0, API_LOADING_COUNT - 1);
         if (API_LOADING_COUNT > 0) return;
-        if (window.Swal && typeof window.Swal.close === "function") {
-          Swal.close();
-        }
+        if (API_LOADING_OVERLAY) API_LOADING_OVERLAY.classList.remove("show");
       }
 
       function resetLookupCachesAndUI() {
@@ -442,6 +451,7 @@
           const opt = document.createElement("option");
           opt.value = k.code;
           opt.textContent = `${k.code} - ${k.name}`;
+          opt.dataset.id = k.id || "";
           khoSelect.appendChild(opt);
         });
         if (
@@ -516,6 +526,13 @@
         window.kyNangData = [];
         document.getElementById("kyNangTables").innerHTML = "";
         document.getElementById("submitToolbar").style.display = "none";
+      }
+
+      function getSelectedOptionId(selectId) {
+        const select = document.getElementById(selectId);
+        if (!select) return "";
+        const option = select.options[select.selectedIndex];
+        return option && option.dataset ? option.dataset.id || "" : "";
       }
 
       document.addEventListener("DOMContentLoaded", () => {
@@ -614,6 +631,7 @@
               const opt = document.createElement("option");
               opt.value = dv.code;
               opt.textContent = `${dv.code} - ${dv.name}`;
+              opt.dataset.id = dv.id || "";
               donViSelect.appendChild(opt);
             });
 
@@ -1276,6 +1294,8 @@
         <input type="hidden" class="nuoc" value="${rowData?.nuoc || ""}">
         <input type="hidden" class="hang" value="${rowData?.hang || ""}">
         <input type="hidden" class="model" value="${rowData?.model || ""}">
+        <input type="hidden" class="itemId" value="${rowData?.itemId || ""}">
+        <input type="hidden" class="unitId" value="${rowData?.unitId || ""}">
       </td>
       <td>
         <input type="text" class="dvt dvt-readonly" placeholder="Tự động điền" value="${rowData?.dvt || ""}" readonly>
@@ -1299,6 +1319,8 @@
         const nuocInput = row.querySelector(".nuoc");
         const hangInput = row.querySelector(".hang");
         const modelInput = row.querySelector(".model");
+        const itemIdInput = row.querySelector(".itemId");
+        const unitIdInput = row.querySelector(".unitId");
         const dvtInput = row.querySelector(".dvt");
 
         // Khởi tạo datalist với tất cả options
@@ -1308,12 +1330,16 @@
         // Hàm xử lý auto-fill khi chọn "Tên thương mại"
         const handleTenThuongMaiChange = function () {
           const selectedTenThuongMai = this.value.trim();
+          itemIdInput.value = "";
+          unitIdInput.value = "";
           if (!selectedTenThuongMai) {
             // Clear auto-filled fields if input is empty
             loaiInput.value = "";
             nuocInput.value = "";
             hangInput.value = "";
             modelInput.value = "";
+            itemIdInput.value = "";
+            unitIdInput.value = "";
             saveTableData(k);
             return;
           }
@@ -1332,6 +1358,8 @@
             nuocInput.value = match.nuocSX || "";
             hangInput.value = match.hang || "";
             modelInput.value = match.ncc || "";
+            itemIdInput.value = match.id || "";
+            unitIdInput.value = match.unitId || "";
             saveTableData(k);
           } else if (matches.length > 1) {
             // Nhiều kết quả - cho user chọn
@@ -1342,6 +1370,8 @@
               nuocInput.value = selected.nuocSX || "";
               hangInput.value = selected.hang || "";
               modelInput.value = selected.ncc || "";
+              itemIdInput.value = selected.id || "";
+              unitIdInput.value = selected.unitId || "";
               saveTableData(k);
             });
           }
@@ -1370,8 +1400,13 @@
               nuocInput.value = match.nuocSX || "";
               hangInput.value = match.hang || "";
               modelInput.value = match.ncc || "";
+              itemIdInput.value = match.id || "";
+              unitIdInput.value = match.unitId || "";
               saveTableData(k);
             }
+          } else {
+            itemIdInput.value = "";
+            unitIdInput.value = "";
           }
         };
 
@@ -1383,6 +1418,8 @@
         // Event: Khi nhập "Tên thiết bị" - lọc dropdown "Tên thương mại"
         tenTBInput.addEventListener("input", function () {
           const selectedTenTB = this.value.trim();
+          itemIdInput.value = "";
+          unitIdInput.value = "";
           updateTenThuongMaiDatalist(dlTenThuongMaiId, selectedTenTB);
         });
 
@@ -1550,6 +1587,8 @@
       function saveTableData(k) {
         const tb = document.getElementById(`tbody${k}`);
         window.kyNangData[k].rows = [...tb.children].map((tr) => ({
+          itemId: tr.querySelector(".itemId").value,
+          unitId: tr.querySelector(".unitId").value,
           tenTB: tr.querySelector(".tenTB").value,
           tenThuongMai: tr.querySelector(".tenThuongMai").value,
           loai: tr.querySelector(".loai").value,
@@ -1819,6 +1858,8 @@
                 return;
               }
               items.push({
+                itemId: tr.querySelector(".itemId").value.trim(),
+                unitId: tr.querySelector(".unitId").value.trim(),
                 tenThietBi: tenTB,
                 tenThuongMai: tenThuongMai,
                 loai: loai,
@@ -1884,7 +1925,9 @@
           const gioHoc = `${gioBatDau} - ${gioKetThuc}`;
           const meta = {
             donViCoSo: donViCoSo,
+            organizationId: getSelectedOptionId("donViCoSo"),
             khoXuat: khoXuat, // Gửi lên server
+            warehouseId: getSelectedOptionId("khoXuat"),
             ngayHoc: ngayHoc,
             gioHoc: gioHoc,
             maHocPhan: maHP,
