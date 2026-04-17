@@ -2,8 +2,10 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Đăng ký Trang thiết bị</title>
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Phiếu Đăng Ký Trang Thiết Bị Thực Hành - Khoa Điều Dưỡng</title>
+    <meta http-equiv="content-type" content="text/html;charset=utf-8" />
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=5.0, user-scalable=no">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <link
       rel="stylesheet"
       href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.2/css/all.min.css"
@@ -694,6 +696,12 @@
                 window.FORM_SETTINGS = settings || {};
                 applyFormSettings(window.FORM_SETTINGS);
               })
+              .withFailureHandler((err) => {
+                msgErr(
+                  "❌ Không thể tải cài đặt hệ thống: " +
+                    (err.message || "Lỗi không xác định"),
+                );
+              })
               .getAdminSettings();
             // KHÔNG gọi initTable() ở đây - chỉ gọi khi bấm nút "Tạo bảng thiết bị"
 
@@ -782,6 +790,12 @@
             // Khi chọn mã học phần - sử dụng cả 'change' và 'input' để tương thích mobile
             ma.addEventListener("change", handleMaHocPhanChange);
             ma.addEventListener("input", handleMaHocPhanChange);
+          })
+          .withFailureHandler((err) => {
+            msgErr(
+              "❌ Không thể tải danh sách học phần: " +
+                (err.message || "Lỗi không xác định"),
+            );
           })
           .getCourses();
 

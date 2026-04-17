@@ -679,4 +679,107 @@
     border-radius: 6px;
     cursor: pointer;
   }
+  @media (max-width: 1024px) {
+    .wrap {
+      max-width: 100%;
+      margin: 16px auto;
+      padding: 12px;
+    }
+    .page-title {
+      margin: 20px 0 14px;
+      font-size: 20px;
+      line-height: 1.35;
+    }
+    .grid-3-col {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .field-max-340 {
+      max-width: 100%;
+    }
+    .kn-head-row {
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .kn-meta-row {
+      grid-template-columns: 1fr;
+    }
+    .row-count-pill {
+      justify-self: start;
+    }
+  }
+  @media (max-width: 768px) {
+    .page-title {
+      font-size: 17px;
+    }
+    .top-actions,
+    .toolbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .top-actions button,
+    .toolbar button,
+    .submit-toolbar .btn {
+      width: 100%;
+    }
+    .grid-2-col,
+    .grid-3-col,
+    .g-3 {
+      grid-template-columns: 1fr;
+    }
+    .field-min-120 {
+      min-width: 0;
+    }
+    input[type="date"] {
+      max-width: 100%;
+      min-width: 0;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .kn-table {
+      min-width: 760px;
+    }
+    .selection-table {
+      min-width: 560px;
+    }
+    .selection-cell {
+      font-size: 12px;
+      padding: 6px;
+    }
+    .api-loading-card {
+      padding: 16px;
+      gap: 10px;
+    }
+    .api-loading-spinner {
+      width: 34px;
+      height: 34px;
+      flex-basis: 34px;
+    }
+    .api-loading-title {
+      font-size: 14px;
+    }
+    .api-loading-text {
+      font-size: 12px;
+    }
+  }
+  @media (max-width: 420px) {
+    .wrap {
+      padding: 8px;
+      margin: 10px auto;
+    }
+    .card {
+      padding: 10px;
+      border-radius: 10px;
+    }
+    button,
+    .btn {
+      min-height: 40px;
+      font-size: 13px;
+    }
+    .load-form-title,
+    .section-title {
+      font-size: 14px;
+    }
+  }
 </style>
