@@ -385,9 +385,138 @@
       };
       const COURSES = [];
       let DANH_MUC_DATA = []; // Dữ liệu chi tiết từ sheet Danh mục
+      let COURSE_CATALOG_DATA = []; // Dữ liệu học phần/phòng lab gốc
       let USER_INFO = {}; // Thông tin user từ sheet Nhân sự
       let IS_SUBMITTING = false; // Prevent double submit
       let CACHED_DATALISTS = {}; // Cache cho datalists (dùng let vì cần reset)
+      let API_LOADING_COUNT = 0;
+      let LAST_SELECTED_ORG_CODE = "";
+      let LAST_SELECTED_WAREHOUSE_CODE = "";
+
+      function beginApiLoading(text) {
+        API_LOADING_COUNT += 1;
+        if (window.Swal && typeof window.Swal.fire === "function") {
+          Swal.fire({
+            title: text || "Đang tải dữ liệu...",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+              Swal.showLoading();
+            },
+          });
+        }
+      }
+
+      function endApiLoading() {
+        API_LOADING_COUNT = Math.max(0, API_LOADING_COUNT - 1);
+        if (API_LOADING_COUNT > 0) return;
+        if (window.Swal && typeof window.Swal.close === "function") {
+          Swal.close();
+        }
+      }
+
+      function resetLookupCachesAndUI() {
+        CACHED_DATALISTS = {
+          tenTB: null,
+          tenThuongMai: null,
+          loai: null,
+          nuocSX: null,
+          hang: null,
+          ncc: null,
+          dvt: null,
+          loaiMonHoc: null,
+          maMonHoc: null,
+          tenMonHoc: null,
+          phong: null,
+          kyThuat: null,
+        };
+        buildDatalists();
+        refreshAllDatalists();
+      }
+
+      function renderKhoOptions(khoList) {
+        const khoSelect = document.getElementById("khoXuat");
+        const currentValue = khoSelect.value;
+        khoSelect.innerHTML = '<option value="">-- Chọn kho xuất --</option>';
+        (khoList || []).forEach((k) => {
+          const opt = document.createElement("option");
+          opt.value = k.code;
+          opt.textContent = `${k.code} - ${k.name}`;
+          khoSelect.appendChild(opt);
+        });
+        if (
+          currentValue &&
+          (khoList || []).some((k) => String(k.code) === String(currentValue))
+        ) {
+          khoSelect.value = currentValue;
+        }
+      }
+
+      function loadWarehousesByOrganization(organizationCode, done) {
+        beginApiLoading("Đang tải danh sách kho...");
+        renderKhoOptions([]);
+        if (!organizationCode) {
+          DANH_MUC_DATA = [];
+          resetLookupCachesAndUI();
+          endApiLoading();
+          if (typeof done === "function") done();
+          return;
+        }
+
+        google.script.run
+          .withSuccessHandler((warehouses) => {
+            renderKhoOptions(warehouses || []);
+            endApiLoading();
+            if (typeof done === "function") done();
+          })
+          .withFailureHandler((err) => {
+            endApiLoading();
+            msgErr(
+              "❌ Không thể tải danh sách kho: " +
+                (err.message || "Lỗi không xác định"),
+            );
+            if (typeof done === "function") done();
+          })
+          .getWarehousesForClient(organizationCode);
+      }
+
+      function loadItemsByWarehouse(warehouseCode, organizationCode) {
+        beginApiLoading("Đang tải danh sách thiết bị...");
+        DANH_MUC_DATA = [];
+        resetLookupCachesAndUI();
+        if (!warehouseCode) {
+          endApiLoading();
+          return;
+        }
+
+        google.script.run
+          .withSuccessHandler((items) => {
+            DANH_MUC_DATA = Array.isArray(items) ? items : [];
+            resetLookupCachesAndUI();
+            endApiLoading();
+          })
+          .withFailureHandler((err) => {
+            endApiLoading();
+            msgErr(
+              "❌ Không thể tải danh sách thiết bị: " +
+                (err.message || "Lỗi không xác định"),
+            );
+          })
+          .getItemsByWarehouseForClient(warehouseCode, organizationCode || "");
+      }
+
+      function hasCreatedDeviceTables() {
+        return !!(
+          (window.kyNangData && window.kyNangData.length) ||
+          document.getElementById("kyNangTables").children.length
+        );
+      }
+
+      function clearCreatedDeviceTables() {
+        window.kyNangData = [];
+        document.getElementById("kyNangTables").innerHTML = "";
+        document.getElementById("submitToolbar").style.display = "none";
+      }
 
       document.addEventListener("DOMContentLoaded", () => {
         const userEmail = "<?= userEmail ?>";
@@ -471,13 +600,15 @@
         populateTimeSelects(); // Populate all time dropdowns (gioBatDau, gioKetThuc, gioNhan, gioTra)
 
         // merge LOOKUPS from server
+        beginApiLoading("Đang tải dữ liệu danh mục...");
         google.script.run
           .withSuccessHandler((data) => {
             Object.assign(LOOKUPS, data || {});
             DANH_MUC_DATA = data.danhMucData || [];
+            COURSE_CATALOG_DATA = data.danhMucData || [];
             USER_INFO = data.userInfo || {};
 
-            // Đổ dữ liệu Đơn vị cơ sở
+            // Đổ dữ liệu Đơn vị cơ sở (API)
             const donViSelect = document.getElementById("donViCoSo");
             (data.donViCoSo || []).forEach((dv) => {
               const opt = document.createElement("option");
@@ -486,30 +617,57 @@
               donViSelect.appendChild(opt);
             });
 
-            // Đổ dữ liệu Kho xuất
-            const khoSelect = document.getElementById("khoXuat");
-            (data.kho || []).forEach((k) => {
-              const opt = document.createElement("option");
-              opt.value = k.code;
-              opt.textContent = `${k.code} - ${k.name}`;
-              khoSelect.appendChild(opt);
+            renderKhoOptions(data.kho || []);
+            resetLookupCachesAndUI();
+            LAST_SELECTED_ORG_CODE =
+              document.getElementById("donViCoSo").value || "";
+            LAST_SELECTED_WAREHOUSE_CODE =
+              document.getElementById("khoXuat").value || "";
+
+            // Chọn đơn vị -> gọi API lấy kho
+            donViSelect.addEventListener("change", async () => {
+              const orgCode = donViSelect.value || "";
+              if (orgCode === LAST_SELECTED_ORG_CODE) return;
+              if (hasCreatedDeviceTables()) {
+                const shouldClear = await confirmSwal(
+                  "Xác nhận thay đổi đơn vị",
+                  'Thay đổi "Đơn vị cơ sở" sẽ xóa toàn bộ Bảng thiết bị hiện tại do dữ liệu kho/vật tư thay đổi. Bạn có muốn tiếp tục?',
+                  "Tiếp tục thay đổi",
+                );
+                if (!shouldClear) {
+                  donViSelect.value = LAST_SELECTED_ORG_CODE;
+                  return;
+                }
+                clearCreatedDeviceTables();
+              }
+              LAST_SELECTED_ORG_CODE = orgCode;
+              LAST_SELECTED_WAREHOUSE_CODE = "";
+              loadWarehousesByOrganization(orgCode, () => {
+                loadItemsByWarehouse("", orgCode);
+              });
             });
 
-            // Reset cache để force rebuild datalists với dữ liệu mới
-            CACHED_DATALISTS = {
-              tenTB: null,
-              tenThuongMai: null,
-              loai: null,
-              nuocSX: null,
-              hang: null,
-              ncc: null,
-              dvt: null,
-              loaiMonHoc: null,
-              maMonHoc: null,
-              tenMonHoc: null,
-              phong: null,
-              kyThuat: null,
-            };
+            // Chọn kho -> gọi API lấy thiết bị
+            const khoSelect = document.getElementById("khoXuat");
+            khoSelect.addEventListener("change", async () => {
+              const orgCode = donViSelect.value || "";
+              const whCode = khoSelect.value || "";
+              if (whCode === LAST_SELECTED_WAREHOUSE_CODE) return;
+              if (hasCreatedDeviceTables()) {
+                const shouldClear = await confirmSwal(
+                  "Xác nhận thay đổi kho",
+                  'Thay đổi "Kho xuất" sẽ xóa toàn bộ Bảng thiết bị hiện tại do danh sách vật tư thay đổi. Bạn có muốn tiếp tục?',
+                  "Tiếp tục thay đổi",
+                );
+                if (!shouldClear) {
+                  khoSelect.value = LAST_SELECTED_WAREHOUSE_CODE;
+                  return;
+                }
+                clearCreatedDeviceTables();
+              }
+              LAST_SELECTED_WAREHOUSE_CODE = whCode;
+              loadItemsByWarehouse(whCode, orgCode);
+            });
 
 
             // Lấy cài đặt admin để áp dụng ẩn/bắt buộc cho các trường
@@ -519,8 +677,6 @@
                 applyFormSettings(window.FORM_SETTINGS);
               })
               .getAdminSettings();
-
-            buildDatalists();
             // KHÔNG gọi initTable() ở đây - chỉ gọi khi bấm nút "Tạo bảng thiết bị"
 
             // Tự động điền thông tin user
@@ -536,6 +692,14 @@
               document.getElementById("emailGiangVienPhuTrach").value =
                 USER_INFO.email;
             }
+            endApiLoading();
+          })
+          .withFailureHandler((err) => {
+            endApiLoading();
+            msgErr(
+              "❌ Không thể tải dữ liệu khởi tạo: " +
+                (err.message || "Lỗi không xác định"),
+            );
           })
           .getLookupsForClient();
 
@@ -558,7 +722,7 @@
             // Hàm xử lý khi chọn mã học phần
             const handleMaHocPhanChange = () => {
               const code = ma.value;
-              const found = DANH_MUC_DATA.find((x) => x.maMonHoc === code);
+              const found = COURSE_CATALOG_DATA.find((x) => x.maMonHoc === code);
               if (found) {
                 // Ô 11: Tên môn học - tự động điền
                 document.getElementById("hocPhan").value =
@@ -607,6 +771,17 @@
           .getElementById("btnAddTable")
           .addEventListener("click", (e) => {
             e.preventDefault();
+            const khoXuat = document.getElementById("khoXuat").value || "";
+            if (!khoXuat) {
+              msgErr("❌ Vui lòng chọn Kho xuất trước khi tạo bảng thiết bị.");
+              return;
+            }
+            if (!Array.isArray(DANH_MUC_DATA) || DANH_MUC_DATA.length === 0) {
+              msgErr(
+                "❌ Kho xuất hiện tại không có danh sách vật tư. Không thể tạo bảng thiết bị.",
+              );
+              return;
+            }
             initTable();
             document.getElementById("submitToolbar").style.display = "block";
             // Refresh datalists sau khi tạo bảng
@@ -695,7 +870,7 @@
 
         // Dùng giá trị trong ô "Loại lab" để so sánh với cột L (loaiLab)
         // Rồi lấy phòng từ cột M của những dòng có cùng giá trị
-        const phongOptions = DANH_MUC_DATA.filter(
+        const phongOptions = COURSE_CATALOG_DATA.filter(
           (x) => x.loaiLab === loaiLabValue && x.phong,
         ).map((x) => x.phong);
 
@@ -1440,9 +1615,9 @@
         document.getElementById("ts").value = "";
 
         // Reset các bảng kỹ năng
-        window.kyNangData = [];
-        document.getElementById("kyNangTables").innerHTML = "";
-        document.getElementById("submitToolbar").style.display = "none";
+        clearCreatedDeviceTables();
+        LAST_SELECTED_ORG_CODE = "";
+        LAST_SELECTED_WAREHOUSE_CODE = "";
         window.LAST_ID_DEXUAT = null;
       }
 
@@ -1932,7 +2107,12 @@
             // Fill meta data
             const meta = data.meta;
             document.getElementById("donViCoSo").value = meta.donViCoSo || "";
-            document.getElementById("khoXuat").value = meta.khoXuat || "";
+            loadWarehousesByOrganization(meta.donViCoSo || "", () => {
+              document.getElementById("khoXuat").value = meta.khoXuat || "";
+              LAST_SELECTED_ORG_CODE = meta.donViCoSo || "";
+              LAST_SELECTED_WAREHOUSE_CODE = meta.khoXuat || "";
+              loadItemsByWarehouse(meta.khoXuat || "", meta.donViCoSo || "");
+            });
             document.getElementById("ngayHoc").value = meta.ngayHoc || "";
 
             // Parse giờ học "HH:mm - HH:mm"

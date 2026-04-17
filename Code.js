@@ -5,6 +5,15 @@ const CONFIG = {
   CATALOG_SHEET: "Danh mục",
   REQUEST_SHEET: "Đăng ký TB",
   N8N_WEBHOOK_URL: "https://n8n.eiu.vn/webhook-test/00bd269d-5ac0-4cb5-a4ea-e52b4e527a40",
+  LOOKUP_API_BASE_URL: "https://gatewayuat.eiu.vn",
+  LOOKUP_API_KEY: "EIUZx88nhEaNQOjOt1ePm42BmVvggDOD8i3",
+  LOOKUP_API_KEY_HEADER: "X-API-KEY",
+  LOOKUP_ORGANIZATIONS_PATH:
+    "/api/industrial-park/inventory/external-issue-sync/organizations",
+  LOOKUP_WAREHOUSES_PATH:
+    "/api/industrial-park/inventory/external-issue-sync/warehouses",
+  LOOKUP_ITEMS_BY_WAREHOUSE_PATH:
+    "/api/industrial-park/inventory/external-issue-sync/items-by-warehouse",
   ALLOWED_DOMAIN: "eiu.edu.vn",
   SEND_USER_EMAIL: true,
   SEND_ADMIN_EMAIL: true,
@@ -273,6 +282,217 @@ function getN8nWebhookUrl_() {
   return CONFIG.N8N_WEBHOOK_URL;
 }
 
+function getLookupApiSettings_() {
+  const props = PropertiesService.getScriptProperties();
+  const baseUrl = _trim(
+    props.getProperty("LOOKUP_API_BASE_URL") || CONFIG.LOOKUP_API_BASE_URL,
+  );
+  const apiKey = _trim(
+    props.getProperty("LOOKUP_API_KEY") || CONFIG.LOOKUP_API_KEY,
+  );
+  const apiKeyHeader = _trim(
+    props.getProperty("LOOKUP_API_KEY_HEADER") || CONFIG.LOOKUP_API_KEY_HEADER,
+  );
+  const organizationsPath = _trim(
+    props.getProperty("LOOKUP_ORGANIZATIONS_PATH") ||
+      CONFIG.LOOKUP_ORGANIZATIONS_PATH,
+  );
+  const warehousesPath = _trim(
+    props.getProperty("LOOKUP_WAREHOUSES_PATH") || CONFIG.LOOKUP_WAREHOUSES_PATH,
+  );
+  const itemsByWarehousePath = _trim(
+    props.getProperty("LOOKUP_ITEMS_BY_WAREHOUSE_PATH") ||
+      CONFIG.LOOKUP_ITEMS_BY_WAREHOUSE_PATH,
+  );
+
+  return {
+    baseUrl,
+    apiKey,
+    apiKeyHeader,
+    organizationsPath,
+    warehousesPath,
+    itemsByWarehousePath,
+  };
+}
+
+function buildAbsoluteUrl_(baseUrl, path) {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path;
+  const left = baseUrl.replace(/\/+$/, "");
+  const right = path.replace(/^\/+/, "");
+  return left && right ? `${left}/${right}` : "";
+}
+
+function toQueryString_(query) {
+  const pairs = [];
+  Object.keys(query || {}).forEach((k) => {
+    const v = query[k];
+    if (v === null || v === undefined || _trim(v) === "") return;
+    pairs.push(`${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
+  });
+  return pairs.length ? `?${pairs.join("&")}` : "";
+}
+
+function fetchApiJsonByKey_(url, apiKey, apiKeyHeader, query) {
+  if (!url || !apiKey) return null;
+  const headers = {};
+  headers[apiKeyHeader || "X-API-Key"] = apiKey;
+  const finalUrl = `${url}${toQueryString_(query)}`;
+
+  const res = UrlFetchApp.fetch(finalUrl, {
+    method: "get",
+    headers,
+    muteHttpExceptions: true,
+    followRedirects: true,
+  });
+  const status = res.getResponseCode();
+  const bodyText = _trim(res.getContentText() || "");
+  if (status >= 400) {
+    throw new Error(
+      `Lookup API trả về lỗi HTTP ${status}${bodyText ? `: ${bodyText}` : ""}`,
+    );
+  }
+  if (!bodyText) return null;
+  try {
+    return JSON.parse(bodyText);
+  } catch (err) {
+    throw new Error("Lookup API không trả về JSON hợp lệ");
+  }
+}
+
+function pickArrayFromApiPayload_(payload) {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload.items)) return payload.items;
+  if (Array.isArray(payload.data)) return payload.data;
+  if (Array.isArray(payload.result)) return payload.result;
+  if (payload.result && Array.isArray(payload.result.items))
+    return payload.result.items;
+  if (payload.data && Array.isArray(payload.data.items)) return payload.data.items;
+  return [];
+}
+
+function mapOrganizationsFromApi_(rows) {
+  return _uniq(
+    (rows || []).map((r) => {
+      const code = _trim(
+        r.code ||
+          r.Code ||
+          r.organizationCode ||
+          r.OrganizationCode ||
+          r.id ||
+          r.Id ||
+          "",
+      );
+      const name = _trim(
+        r.name ||
+          r.Name ||
+          r.organizationName ||
+          r.OrganizationName ||
+          r.displayName ||
+          "",
+      );
+      if (!code && !name) return "";
+      return JSON.stringify({ code: code || name, name: name || code });
+    }),
+  ).map((x) => JSON.parse(x));
+}
+
+function mapWarehousesFromApi_(rows) {
+  return _uniq(
+    (rows || []).map((r) => {
+      const code = _trim(
+        r.code || r.Code || r.warehouseCode || r.WarehouseCode || "",
+      );
+      const name = _trim(
+        r.name || r.Name || r.warehouseName || r.WarehouseName || "",
+      );
+      if (!code && !name) return "";
+      return JSON.stringify({ code: code || name, name: name || code });
+    }),
+  ).map((x) => JSON.parse(x));
+}
+
+function mapItemsByWarehouseFromApi_(rows) {
+  return (rows || [])
+    .map((r) => {
+      const tenTB = _trim(
+        r.name || r.Name || r.itemName || r.ItemName || r.tenTB || "",
+      );
+      if (!tenTB) return null;
+      return {
+        id: _trim(r.id || r.Id || ""),
+        code: _trim(r.code || r.Code || ""),
+        tenTB: tenTB,
+        tenThuongMai: _trim(r.printName || r.PrintName || ""),
+        dvt: _trim(r.unitName || r.UnitName || ""),
+        loai: "",
+        nuocSX: "",
+        hang: "",
+        ncc: "",
+        loaiMonHoc: "",
+        maMonHoc: "",
+        tenMonHoc: "",
+        loaiLab: "",
+        phong: "",
+        kyThuat: "",
+      };
+    })
+    .filter(Boolean);
+}
+
+function getOrganizationsFromApiKey_() {
+  const settings = getLookupApiSettings_();
+  if (!settings.baseUrl || !settings.apiKey) {
+    throw new Error("Thiếu cấu hình LOOKUP_API_BASE_URL hoặc LOOKUP_API_KEY");
+  }
+  const url = buildAbsoluteUrl_(settings.baseUrl, settings.organizationsPath);
+  if (!url) throw new Error("Thiếu cấu hình LOOKUP_ORGANIZATIONS_PATH");
+  const payload = fetchApiJsonByKey_(url, settings.apiKey, settings.apiKeyHeader);
+  return mapOrganizationsFromApi_(pickArrayFromApiPayload_(payload));
+}
+
+function getWarehousesFromApiKey_(organizationCode) {
+  const settings = getLookupApiSettings_();
+  if (!settings.baseUrl || !settings.apiKey) {
+    throw new Error("Thiếu cấu hình LOOKUP_API_BASE_URL hoặc LOOKUP_API_KEY");
+  }
+  const url = buildAbsoluteUrl_(settings.baseUrl, settings.warehousesPath);
+  if (!url) throw new Error("Thiếu cấu hình LOOKUP_WAREHOUSES_PATH");
+  const payload = fetchApiJsonByKey_(url, settings.apiKey, settings.apiKeyHeader, {
+    organizationCode: _trim(organizationCode || ""),
+  });
+  return mapWarehousesFromApi_(pickArrayFromApiPayload_(payload));
+}
+
+function getItemsByWarehouseFromApiKey_(warehouseCode, organizationCode) {
+  if (!_trim(warehouseCode)) {
+    throw new Error("warehouseCode là bắt buộc");
+  }
+  const settings = getLookupApiSettings_();
+  if (!settings.baseUrl || !settings.apiKey) {
+    throw new Error("Thiếu cấu hình LOOKUP_API_BASE_URL hoặc LOOKUP_API_KEY");
+  }
+  const url = buildAbsoluteUrl_(
+    settings.baseUrl,
+    settings.itemsByWarehousePath,
+  );
+  if (!url) throw new Error("Thiếu cấu hình LOOKUP_ITEMS_BY_WAREHOUSE_PATH");
+  const payload = fetchApiJsonByKey_(url, settings.apiKey, settings.apiKeyHeader, {
+    warehouseCode: _trim(warehouseCode),
+    organizationCode: _trim(organizationCode || ""),
+  });
+  return mapItemsByWarehouseFromApi_(pickArrayFromApiPayload_(payload));
+}
+
+function getWarehousesForClient(organizationCode) {
+  return getWarehousesFromApiKey_(organizationCode);
+}
+
+function getItemsByWarehouseForClient(warehouseCode, organizationCode) {
+  return getItemsByWarehouseFromApiKey_(warehouseCode, organizationCode);
+}
+
 function parseWebhookBody_(text) {
   if (!text) return null;
   let current = text;
@@ -497,7 +717,6 @@ function getLookupsForClient() {
     kyThuat,
   } = LOOKUP_CACHE;
   const nhanSu = getNhanSu();
-  const danhMucData = getDanhMucData();
   var userEmail = "";
   try {
     userEmail = getUserEmail() || "";
@@ -506,8 +725,8 @@ function getLookupsForClient() {
   }
   const userInfo = getUserInfoByEmail(userEmail);
 
-  // --- BỔ SUNG LẤY ĐƠN VỊ VÀ KHO ---
-  const extraData = getDonViVaKho();
+  const danhMucData = getDanhMucData();
+  const donViApi = getOrganizationsFromApiKey_();
 
   return {
     tenTB,
@@ -524,8 +743,8 @@ function getLookupsForClient() {
     giangVien: nhanSu.giangVien,
     danhMucData: danhMucData,
     userInfo: userInfo,
-    donViCoSo: extraData.donVi, // Trả mảng {code, name} Đơn vị
-    kho: extraData.kho, // Trả mảng {code, name} Kho
+    donViCoSo: donViApi, // Lấy từ API external-issue-sync/organizations
+    kho: [], // Sẽ gọi động theo organizationCode
   };
 }
 
