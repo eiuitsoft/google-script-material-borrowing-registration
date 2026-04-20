@@ -149,3 +149,47 @@ Nếu lỗi:
 - Thông báo cho người dùng:
   - Thành công: hiển thị mã phiếu vừa tạo (`transactionNo`).
   - Thất bại: hiển thị trực tiếp `message` lỗi từ API.
+
+---
+
+## Sơ đồ kỹ thuật luồng theo hàm
+
+Sơ đồ dưới đây mô tả chi tiết luồng xử lý chính theo hàm (Frontend -> Apps Script -> n8n -> lưu sheet):
+
+```mermaid
+flowchart TD
+    A["index.html: DOMContentLoaded"] --> B["google.script.run.getLookupsForClient()"]
+    B --> C["Code.js:getLookupsForClient()<br/>Lấy danh mục khởi tạo + user info"]
+    C --> D["index.html: render đơn vị/kho + setup event handlers"]
+
+    D --> E["index.html: submitForm()"]
+    E --> F{"Validate client-side<br/>đủ field + dữ liệu item hợp lệ?"}
+    F -- "Không" --> E1["msgErr(...) và dừng submit"]
+    F -- "Có" --> G["google.script.run.submitRegistration(payload)"]
+
+    G --> H["Code.js:submitRegistration(payload)"]
+    H --> I{"Validate server-side<br/>domain, field bắt buộc, số lượng > 0..."}
+    I -- "Không hợp lệ" --> I1["throw Error -> withFailureHandler -> UI báo lỗi"]
+    I -- "Hợp lệ" --> J["Sinh mã phiếu meta.idDexuat<br/>generateTransactionNo_()"]
+    J --> K["buildRequestRow_() cho từng item"]
+    K --> L["buildN8nWebhookItems_() chuẩn hóa payload webhook"]
+    L --> M["UrlFetchApp.fetch(N8N_WEBHOOK_URL)"]
+    M --> N["resolveAbpWebhookResult_()<br/>parse isSuccess/error/message"]
+
+    N --> O{"webhookResult.ok ?"}
+    O -- "Không" --> O1["throw Error<br/>Không lưu Google Sheet"]
+    O -- "Có" --> P["(Nếu update) xóa dòng cũ theo oldIdDexuat"]
+    P --> Q["Ghi rows vào sheet 'Đăng ký TB'"]
+    Q --> R["Cập nhật sheet 'Phiếu nhập' (phiếu mới)"]
+    R --> S["Gửi email user/admin"]
+    S --> T["return { ok: true, idDexuat, transactionNo }"]
+
+    T --> U["index.html withSuccessHandler:<br/>Hiển thị thành công + mã phiếu"]
+    O1 --> V["index.html withFailureHandler:<br/>Hiển thị lỗi chi tiết từ API/n8n"]
+```
+
+### Ghi chú quan trọng
+
+- Điểm kiểm soát nghiệp vụ quan trọng nhất nằm ở `Code.js/submitRegistration`.
+- Hệ thống áp dụng nguyên tắc: **Webhook thất bại thì không lưu dữ liệu vào sheet**.
+- `index.html/submitForm` chỉ là lớp validate UI, kết quả cuối cùng do backend xác nhận.
