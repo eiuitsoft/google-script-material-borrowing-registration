@@ -363,6 +363,9 @@
           <button id="btnReset">
             <i class="fa-regular fa-trash-can"></i> Xóa trắng
           </button>
+          <button id="btnSaveDraft" type="button">
+            <i class="fa-regular fa-floppy-disk"></i> Lưu nháp
+          </button>
           <button class="btn" id="btnSubmit">
             <i class="fa-solid fa-paper-plane"></i> Gửi đăng ký
           </button>
@@ -395,6 +398,141 @@
       let LAST_SELECTED_ORG_CODE = "";
       let LAST_SELECTED_WAREHOUSE_CODE = "";
       let API_LOADING_OVERLAY = null;
+      let CLIENT_REQUEST_ID = "";
+      const DRAFT_KEY = "EIU_EQUIPMENT_MANUAL_DRAFT_V1";
+      let HAS_UNSAVED_CHANGES = false;
+      let DRAFT_IS_RESTORING = false;
+      let SUBMIT_COMPLETED = false;
+
+      function newClientRequestId_() {
+        return `req_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+      }
+
+      function ensureClientRequestId_() {
+        if (!CLIENT_REQUEST_ID) CLIENT_REQUEST_ID = newClientRequestId_();
+        return CLIENT_REQUEST_ID;
+      }
+
+      function markDirty_() {
+        if (DRAFT_IS_RESTORING) return;
+        HAS_UNSAVED_CHANGES = true;
+        SUBMIT_COMPLETED = false;
+      }
+
+      function collectDraftState_() {
+        const getVal = (id) => (document.getElementById(id)?.value || "").trim();
+        return {
+          savedAt: new Date().toISOString(),
+          clientRequestId: ensureClientRequestId_(),
+          lastIdDexuat: window.LAST_ID_DEXUAT || "",
+          soKyNang: getVal("soKyNang") || "1",
+          meta: {
+            donViCoSo: getVal("donViCoSo"),
+            khoXuat: getVal("khoXuat"),
+            ngayHoc: getVal("ngayHoc"),
+            gioBatDau: getVal("gioBatDau"),
+            gioKetThuc: getVal("gioKetThuc"),
+            maHocPhan: getVal("maHocPhan"),
+            hocPhan: getVal("hocPhan"),
+            loaiLab: getVal("loaiLab"),
+            phongLab: getVal("phongLab"),
+            giangVien: getVal("giangVien"),
+            email: getVal("email"),
+            soDienThoai: getVal("soDienThoai"),
+            ngayNhan: getVal("ngayNhan"),
+            gioNhan: getVal("gioNhan"),
+            ngayTra: getVal("ngayTra"),
+            gioTra: getVal("gioTra"),
+            giangVienPhuTrach: getVal("giangVienPhuTrach"),
+            emailGiangVienPhuTrach: getVal("emailGiangVienPhuTrach"),
+            hocKy: getVal("hocKy"),
+          },
+          kyNangData: Array.isArray(window.kyNangData) ? window.kyNangData : [],
+        };
+      }
+
+      function saveDraftToLocal_(showToast) {
+        try {
+          const draft = collectDraftState_();
+          localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+          HAS_UNSAVED_CHANGES = false;
+          if (showToast) msgOk("✅ Đã lưu nháp thành công.");
+        } catch (err) {
+          if (showToast) msgErr("❌ Không thể lưu nháp trên trình duyệt này.");
+        }
+      }
+
+      function clearDraftLocal_() {
+        try {
+          localStorage.removeItem(DRAFT_KEY);
+        } catch (err) {}
+      }
+
+      function readDraftLocal_() {
+        try {
+          const raw = localStorage.getItem(DRAFT_KEY);
+          if (!raw) return null;
+          const draft = JSON.parse(raw);
+          return draft && typeof draft === "object" ? draft : null;
+        } catch (err) {
+          return null;
+        }
+      }
+
+      function hasMeaningfulDraft_(draft) {
+        if (!draft || typeof draft !== "object") return false;
+        const meta = draft.meta || {};
+        const hasMetaData = Object.keys(meta).some(
+          (k) => String(meta[k] || "").trim() !== "",
+        );
+        const hasRows =
+          Array.isArray(draft.kyNangData) &&
+          draft.kyNangData.some((x) => Array.isArray(x?.rows) && x.rows.length > 0);
+        return hasMetaData || hasRows;
+      }
+
+      function applyDraftState_(draft) {
+        if (!draft || !draft.meta) return;
+        DRAFT_IS_RESTORING = true;
+        CLIENT_REQUEST_ID = draft.clientRequestId || newClientRequestId_();
+        window.LAST_ID_DEXUAT = draft.lastIdDexuat || null;
+
+        const setVal = (id, v) => {
+          const el = document.getElementById(id);
+          if (el && v !== undefined && v !== null) el.value = v;
+        };
+        Object.keys(draft.meta || {}).forEach((k) => setVal(k, draft.meta[k]));
+        setVal("soKyNang", draft.soKyNang || "1");
+
+        const finalizeTables = () => {
+          window.kyNangData = Array.isArray(draft.kyNangData) ? draft.kyNangData : [];
+          if (window.kyNangData.length) {
+            setVal("soKyNang", String(window.kyNangData.length));
+            initTable();
+            document.getElementById("submitToolbar").style.display = "block";
+            refreshAllDatalists();
+          }
+          DRAFT_IS_RESTORING = false;
+          HAS_UNSAVED_CHANGES = false;
+        };
+
+        const orgCode = draft.meta.donViCoSo || "";
+        const warehouseCode = draft.meta.khoXuat || "";
+        if (!orgCode) {
+          finalizeTables();
+          return;
+        }
+        loadWarehousesByOrganization(orgCode, () => {
+          setVal("khoXuat", warehouseCode);
+          if (!warehouseCode) {
+            finalizeTables();
+            return;
+          }
+          loadItemsByWarehouse(warehouseCode, orgCode);
+          setTimeout(finalizeTables, 250);
+        });
+      }
+
 
       function ensureApiLoadingOverlay() {
         if (API_LOADING_OVERLAY) return API_LOADING_OVERLAY;
@@ -538,6 +676,7 @@
       }
 
       document.addEventListener("DOMContentLoaded", () => {
+        CLIENT_REQUEST_ID = newClientRequestId_();
         const userEmail = "<?= userEmail ?>";
         document.getElementById("email").value = userEmail;
         // Gợi ý học kỳ
@@ -565,24 +704,6 @@
           if (month >= 10) namHoc = `${year}-${nextYear}`;
           else namHoc = `${year - 1}-${year}`;
           return `${hk} (${namHoc})`;
-        }
-
-        // Utility: Debounce function
-        function debounce(func, wait) {
-          let timeout;
-          return function executedFunction(...args) {
-            const later = () => {
-              clearTimeout(timeout);
-              func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-          };
-        }
-
-        // Utility: Validate email format
-        function isValidEmail(email) {
-          return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
         }
 
         // Set min date for 'ngayHoc' and 'ngayNhan' to today
@@ -718,6 +839,20 @@
               document.getElementById("emailGiangVienPhuTrach").value =
                 USER_INFO.email;
             }
+            const draft = readDraftLocal_();
+            if (hasMeaningfulDraft_(draft)) {
+              confirmSwal(
+                "Khôi phục bản nháp?",
+                "Phát hiện dữ liệu nháp đang nhập dở. Bạn có muốn khôi phục không?",
+                "Khôi phục",
+              ).then((yes) => {
+                if (yes) {
+                  applyDraftState_(draft);
+                } else {
+                  clearDraftLocal_();
+                }
+              });
+            }
             endApiLoading();
           })
           .withFailureHandler((err) => {
@@ -823,6 +958,10 @@
           e.preventDefault();
           resetForm();
         });
+        document.getElementById("btnSaveDraft").addEventListener("click", (e) => {
+          e.preventDefault();
+          saveDraftToLocal_(true);
+        });
         document.getElementById("btnSubmit").addEventListener("click", (e) => {
           e.preventDefault();
           submitForm();
@@ -863,6 +1002,15 @@
               '<i class="fa-regular fa-pen-to-square"></i> Chỉnh sửa phiếu';
             collapseBtn.style.display = "none";
           });
+
+        document.addEventListener("input", markDirty_);
+        document.addEventListener("change", markDirty_);
+        window.addEventListener("beforeunload", (e) => {
+          if (IS_SUBMITTING || SUBMIT_COMPLETED || !HAS_UNSAVED_CHANGES) return;
+          e.preventDefault();
+          e.returnValue =
+            "Bạn có dữ liệu chưa được lưu nháp hoặc gửi. Nếu rời trang, dữ liệu sẽ không được lưu.";
+        });
       });
 
       // Áp dụng cài đặt form: ẩn hoặc đánh dấu bắt buộc cho các trường
@@ -942,7 +1090,9 @@
         document.getElementById("msg").innerHTML = `<div class="err">${s}</div>`;
       }
       async function confirmSwal(title, text, confirmText = "Đồng ý") {
-        if (!(window.Swal && typeof window.Swal.fire === "function")) return false;
+        if (!(window.Swal && typeof window.Swal.fire === "function")) {
+          return window.confirm(`${title}\n\n${text}`);
+        }
         const result = await Swal.fire({
           icon: "question",
           title,
@@ -1613,6 +1763,7 @@
           sl: tr.querySelector(".sl").value,
           ghichu: tr.querySelector(".ghichu").value,
         }));
+        markDirty_();
       }
       function delTable(k) {
         window.kyNangData.splice(k, 1);
@@ -1672,6 +1823,10 @@
         LAST_SELECTED_ORG_CODE = "";
         LAST_SELECTED_WAREHOUSE_CODE = "";
         window.LAST_ID_DEXUAT = null;
+        CLIENT_REQUEST_ID = newClientRequestId_();
+        HAS_UNSAVED_CHANGES = false;
+        SUBMIT_COMPLETED = false;
+        clearDraftLocal_();
       }
 
       async function submitForm() {
@@ -1835,6 +1990,8 @@
               const dvt = tr.querySelector(".dvt").value.trim();
               const sl = Number(tr.querySelector(".sl").value);
               const gc = tr.querySelector(".ghichu").value.trim();
+              const itemId = tr.querySelector(".itemId").value.trim();
+              const unitId = tr.querySelector(".unitId").value.trim();
               if (!tenTB) {
                 msgErr(
                   `Kỹ năng #${k + 1} - Dòng #${i + 1}: "Tên thiết bị" là bắt buộc.`,
@@ -1871,9 +2028,25 @@
                 });
                 return;
               }
+              if (!itemId) {
+                msgErr(
+                  `Kỹ năng #${k + 1} - Dòng #${i + 1}: chưa xác định itemId. Vui lòng chọn vật tư từ danh sách.`,
+                );
+                tr.querySelector(".tenTB").classList.add("error");
+                tr.querySelector(".tenTB").focus();
+                return;
+              }
+              if (!unitId) {
+                msgErr(
+                  `Kỹ năng #${k + 1} - Dòng #${i + 1}: chưa xác định unitId. Vui lòng chọn lại vật tư để đồng bộ đơn vị tính.`,
+                );
+                tr.querySelector(".tenTB").classList.add("error");
+                tr.querySelector(".tenTB").focus();
+                return;
+              }
               items.push({
-                itemId: tr.querySelector(".itemId").value.trim(),
-                unitId: tr.querySelector(".unitId").value.trim(),
+                itemId: itemId,
+                unitId: unitId,
                 tenThietBi: tenTB,
                 tenThuongMai: tenThuongMai,
                 loai: loai,
@@ -1958,6 +2131,7 @@
             giangVienPhuTrach: gvpt,
             emailGiangVienPhuTrach: emailgvpt,
             hocKy: hocKy,
+            clientRequestId: ensureClientRequestId_(),
           };
           const payload = { meta, items };
           if (window.LAST_ID_DEXUAT) {
@@ -1990,6 +2164,10 @@
                 if (res.idDexuat) {
                   window.LAST_ID_DEXUAT = res.idDexuat;
                 }
+                CLIENT_REQUEST_ID = newClientRequestId_();
+                HAS_UNSAVED_CHANGES = false;
+                SUBMIT_COMPLETED = true;
+                clearDraftLocal_();
                 // Không hiển thị popup sau khi gửi - user có thể dùng nút "Chỉnh sửa phiếu" nếu cần
               } else {
                 msgErr("❌ Không rõ kết quả gửi. Vui lòng thử lại.");
@@ -2040,6 +2218,7 @@
                   ? `❌ Gửi phiếu thất bại: ${displayMessage}`
                   : "❌ Gửi phiếu thất bại. Vui lòng thử lại.",
               );
+              CLIENT_REQUEST_ID = newClientRequestId_();
 
             })
             .submitRegistration(payload);

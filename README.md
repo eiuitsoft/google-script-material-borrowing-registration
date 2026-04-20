@@ -150,6 +150,30 @@ Nếu lỗi:
   - Thành công: hiển thị mã phiếu vừa tạo (`transactionNo`).
   - Thất bại: hiển thị trực tiếp `message` lỗi từ API.
 
+### Cấu hình bảo mật (Script Properties)
+
+Không hard-code secret trong code. Cần cấu hình qua **Project Settings -> Script properties**:
+
+- `N8N_WEBHOOK_URL`
+- `LOOKUP_API_BASE_URL`
+- `LOOKUP_API_KEY`
+- `LOOKUP_API_KEY_HEADER` (mặc định `X-API-KEY`)
+- `LOOKUP_ORGANIZATIONS_PATH`
+- `LOOKUP_WAREHOUSES_PATH`
+- `LOOKUP_ITEMS_BY_WAREHOUSE_PATH`
+
+### Idempotency và ràng buộc đồng bộ
+
+- Frontend gửi thêm `meta.clientRequestId` cho mỗi lần submit.
+- Backend bật idempotency (`ENABLE_IDEMPOTENCY`) để chặn submit trùng trong khoảng TTL.
+- Backend bắt buộc `itemId` và `unitId` cho từng dòng vật tư (`REQUIRE_ITEM_IDS = true`).
+
+### Trang log lỗi đồng bộ
+
+- Sheet log kỹ thuật: `Sync Logs`.
+- Web app page xem log: thêm `?page=sync-logs` vào URL.
+- API đọc log: `getRecentSyncLogs(limit)`.
+
 ---
 
 ## Sơ đồ kỹ thuật luồng theo hàm

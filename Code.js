@@ -4,9 +4,9 @@
 const CONFIG = {
   CATALOG_SHEET: "Danh mục",
   REQUEST_SHEET: "Đăng ký TB",
-  N8N_WEBHOOK_URL: "https://n8n.eiu.vn/webhook/00bd269d-5ac0-4cb5-a4ea-e52b4e527a40",
-  LOOKUP_API_BASE_URL: "https://gatewayuat.eiu.vn",
-  LOOKUP_API_KEY: "EIUZx88nhEaNQOjOt1ePm42BmVvggDOD8i3",
+  N8N_WEBHOOK_URL: "",
+  LOOKUP_API_BASE_URL: "",
+  LOOKUP_API_KEY: "",
   LOOKUP_API_KEY_HEADER: "X-API-KEY",
   LOOKUP_ORGANIZATIONS_PATH:
     "/api/industrial-park/inventory/external-issue-sync/organizations",
@@ -15,6 +15,10 @@ const CONFIG = {
   LOOKUP_ITEMS_BY_WAREHOUSE_PATH:
     "/api/industrial-park/inventory/external-issue-sync/items-by-warehouse",
   ALLOWED_DOMAIN: "eiu.edu.vn",
+  REQUIRE_ITEM_IDS: true,
+  ENABLE_IDEMPOTENCY: true,
+  IDEMPOTENCY_TTL_SECONDS: 600,
+  SYNC_LOG_SHEET: "Sync Logs",
   SEND_USER_EMAIL: true,
   SEND_ADMIN_EMAIL: true,
   ADMIN_EMAIL: "",
@@ -77,6 +81,16 @@ function doGet(e) {
     baseUrl = ScriptApp.getService().getUrl() || "";
   } catch (err) {
     baseUrl = "";
+  }
+
+  const page = _trim(e && e.parameter && e.parameter.page);
+  if (page === "sync-logs") {
+    const tpl = HtmlService.createTemplateFromFile("sync-logs");
+    tpl.userEmail = userEmail;
+    return tpl
+      .evaluate()
+      .setTitle("Sync Logs - Đăng ký Trang thiết bị")
+      .setSandboxMode(HtmlService.SandboxMode.IFRAME);
   }
 
   const indexTemplate = HtmlService.createTemplateFromFile("index");
@@ -233,38 +247,6 @@ function getUserInfoByEmail(email) {
   return userInfo;
 }
 
-// ==========================================
-// HÀM MỚI: LẤY DANH SÁCH ĐƠN VỊ VÀ KHO (CHỈ TRUE)
-// ==========================================
-function getDonViVaKho() {
-  const ss = SpreadsheetApp.getActive();
-  const shDonVi = ss.getSheetByName("Đơn vị cơ sở");
-  const shKho = ss.getSheetByName("Kho");
-
-  const donViList = [];
-  if (shDonVi) {
-    const data = shDonVi.getDataRange().getValues();
-    for (let i = 1; i < data.length; i++) {
-      // Cột C (Trạng thái) là index 2
-      if (data[i][2] === true || String(data[i][2]).toUpperCase() === "TRUE") {
-        donViList.push({ code: _trim(data[i][0]), name: _trim(data[i][1]) });
-      }
-    }
-  }
-
-  const khoList = [];
-  if (shKho) {
-    const data = shKho.getDataRange().getValues();
-    for (let i = 1; i < data.length; i++) {
-      // Cột D (Trạng thái) của sheet Kho là index 3
-      if (data[i][3] === true || String(data[i][3]).toUpperCase() === "TRUE") {
-        khoList.push({ code: _trim(data[i][0]), name: _trim(data[i][1]) });
-      }
-    }
-  }
-
-  return { donVi: donViList, kho: khoList };
-}
 
 function generateUniqueId() {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -278,8 +260,101 @@ function generateUniqueId() {
 function getN8nWebhookUrl_() {
   const props = PropertiesService.getScriptProperties();
   const configuredUrl = _trim(props.getProperty("N8N_WEBHOOK_URL") || "");
-  if (configuredUrl) return configuredUrl;
-  return CONFIG.N8N_WEBHOOK_URL;
+  const fallbackUrl = _trim(CONFIG.N8N_WEBHOOK_URL || "");
+  const url = configuredUrl || fallbackUrl;
+  if (!url) {
+    throw new Error(
+      "Thiếu cấu hình N8N_WEBHOOK_URL trong Script Properties.",
+    );
+  }
+  return url;
+}
+
+function appendSyncLog_(data) {
+  try {
+    const sheetName = _trim(CONFIG.SYNC_LOG_SHEET || "Sync Logs");
+    const ss = _ss();
+    let sh = ss.getSheetByName(sheetName);
+    if (!sh) sh = ss.insertSheet(sheetName);
+    const headers = [
+      "Timestamp",
+      "Level",
+      "Stage",
+      "IdDexuat",
+      "RequestId",
+      "UserEmail",
+      "StatusCode",
+      "Message",
+      "RawBody",
+    ];
+    if (sh.getLastRow() < 1) sh.getRange(1, 1, 1, headers.length).setValues([headers]);
+    const row = [
+      new Date(),
+      _trim(data.level || "ERROR"),
+      _trim(data.stage || ""),
+      _trim(data.idDexuat || ""),
+      _trim(data.requestId || ""),
+      _trim(data.userEmail || ""),
+      data.statusCode == null ? "" : Number(data.statusCode),
+      _trim(data.message || ""),
+      _trim(data.rawBody || ""),
+    ];
+    sh.getRange(sh.getLastRow() + 1, 1, 1, row.length).setValues([row]);
+  } catch (e) {
+    Logger.log("appendSyncLog_ failed: " + e.message);
+  }
+}
+
+function getRecentSyncLogs(limit) {
+  const maxRows = Math.max(1, Math.min(Number(limit) || 100, 500));
+  const sh = _sh(_trim(CONFIG.SYNC_LOG_SHEET || "Sync Logs"));
+  if (!sh) return [];
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return [];
+  const count = Math.min(maxRows, lastRow - 1);
+  const startRow = lastRow - count + 1;
+  const values = sh.getRange(startRow, 1, count, 9).getValues();
+  return values
+    .reverse()
+    .map((r) => ({
+      timestamp: r[0] instanceof Date ? r[0].toISOString() : _trim(r[0] || ""),
+      level: _trim(r[1] || ""),
+      stage: _trim(r[2] || ""),
+      idDexuat: _trim(r[3] || ""),
+      requestId: _trim(r[4] || ""),
+      userEmail: _trim(r[5] || ""),
+      statusCode: _trim(r[6] || ""),
+      message: _trim(r[7] || ""),
+      rawBody: _trim(r[8] || ""),
+    }));
+}
+
+function assertItemIdentity_(items) {
+  if (!CONFIG.REQUIRE_ITEM_IDS) return;
+  (items || []).forEach((it, idx) => {
+    if (!_trim(it.itemId || "")) {
+      throw new Error(
+        `Dòng thiết bị #${idx + 1} chưa có itemId hợp lệ. Vui lòng chọn lại vật tư từ danh sách.`,
+      );
+    }
+    if (!_trim(it.unitId || "")) {
+      throw new Error(
+        `Dòng thiết bị #${idx + 1} chưa có unitId hợp lệ. Vui lòng chọn lại vật tư để đồng bộ đơn vị tính.`,
+      );
+    }
+  });
+}
+
+function beginIdempotentRequest_(requestId) {
+  if (!CONFIG.ENABLE_IDEMPOTENCY) return;
+  const key = _trim(requestId || "");
+  if (!key) throw new Error("Thiếu clientRequestId để chống submit trùng.");
+  const cache = CacheService.getScriptCache();
+  const cacheKey = `submit:req:${key}`;
+  if (cache.get(cacheKey)) {
+    throw new Error("Yêu cầu này đã được gửi trước đó. Vui lòng tải lại trang nếu cần gửi phiếu mới.");
+  }
+  cache.put(cacheKey, "1", Number(CONFIG.IDEMPOTENCY_TTL_SECONDS || 600));
 }
 
 function getLookupApiSettings_() {
@@ -878,20 +953,10 @@ function getRegistrationById(idDexuat) {
   return { meta: meta, kyNangData: kyNangData, soKyNang: kyNangData.length };
 }
 
-function getAdmins() {
-  const nhanSu = getNhanSu();
-  const list = Array.from(
-    new Set([
-      ...(nhanSu.admins || []),
-      ...(CONFIG.ADMIN_EMAIL ? [CONFIG.ADMIN_EMAIL] : []),
-    ]),
-  );
-  return { admins: list };
-}
-
 function getUserInfo() {
   return { email: Session.getActiveUser().getEmail() || "" };
 }
+
 function getUserEmail() {
   return Session.getActiveUser().getEmail();
 }
@@ -953,18 +1018,6 @@ function parseTimeToDate(timeStr) {
 
 function fmtVN(d) {
   return Utilities.formatDate(d, Session.getScriptTimeZone(), "dd/MM/yyyy");
-}
-
-function getHeaderIndexMap(sh) {
-  const header = sh
-    .getRange(1, 1, 1, sh.getLastColumn())
-    .getValues()[0]
-    .map(_trim);
-  const map = {};
-  header.forEach((name, i) => {
-    if (name) map[name] = i;
-  });
-  return { map, headerLen: header.length };
 }
 
 function ensureRequestSheetHeaders_(sh) {
@@ -1069,6 +1122,8 @@ function submitRegistration(payload) {
   ensureRequestSheetHeaders_(sh);
 
   const meta = payload.meta;
+  const clientRequestId = _trim(meta.clientRequestId || "");
+  beginIdempotentRequest_(clientRequestId);
   const now = new Date();
   if (!meta.ngayHoc) throw new Error('Thiếu "Ngày học".');
   if (!meta.gioHoc) throw new Error('Thiếu "Giờ học".');
@@ -1167,6 +1222,7 @@ function submitRegistration(payload) {
   }
 
   const rows = [];
+  assertItemIdentity_(payload.items);
   payload.items.forEach((it, i) => {
     if (!it.tenThietBi)
       throw new Error(`Dòng thiết bị #${i + 1} thiếu "Tên thiết bị".`);
@@ -1201,6 +1257,7 @@ function submitRegistration(payload) {
         : "new_registration",
       timestamp: new Date().toISOString(),
       idDexuat: meta.idDexuat,
+      requestId: clientRequestId,
       transactionNo: meta.idDexuat,
       transactionType: transactionType,
       sourceChannel: sourceChannel,
@@ -1245,6 +1302,16 @@ function submitRegistration(payload) {
       rawBody: webhookResult.rawBody || "",
       data: webhookResult.data || null,
     };
+    appendSyncLog_({
+      level: "ERROR",
+      stage: "WEBHOOK_SYNC",
+      idDexuat: _trim(meta.idDexuat || ""),
+      requestId: clientRequestId,
+      userEmail: _trim(user.email || ""),
+      statusCode: webhookResult.statusCode || 0,
+      message: resolvedMessage || errMsg,
+      rawBody: webhookResult.rawBody || "",
+    });
     Logger.log("❌ Lỗi khi gửi tới n8n: " + errMsg);
   }
   // ==========================================
@@ -1523,12 +1590,6 @@ function buildEmailHtml(meta, items) {
   </div>`;
 }
 
-function saveAdminSettings(settings) {
-  const props = PropertiesService.getScriptProperties();
-  props.setProperties(settings);
-  return { success: true, message: "Đã lưu cài đặt thành công" };
-}
-
 function getAdminSettings() {
   const props = PropertiesService.getScriptProperties();
   const settings = props.getProperties();
@@ -1571,119 +1632,7 @@ function getAdminSettings() {
   return settings;
 }
 
-function getSheetNames() {
-  const ss = _ss();
-  const sheets = ss.getSheets();
-  return sheets.map((s) => s.getName());
-}
-
-function getRegistrationStats() {
-  const sh = _sh(CONFIG.REQUEST_SHEET);
-  if (!sh) return { total: 0, today: 0, thisWeek: 0, thisMonth: 0 };
-  const lastRow = sh.getLastRow();
-  if (lastRow < 2) return { total: 0, today: 0, thisWeek: 0, thisMonth: 0 };
-  const data = sh.getRange(2, 20, lastRow - 1, 1).getValues();
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  let todayCount = 0,
-    weekCount = 0,
-    monthCount = 0;
-  data.forEach((row) => {
-    const date = row[0];
-    if (date instanceof Date) {
-      if (date >= today) todayCount++;
-      if (date >= weekAgo) weekCount++;
-      if (date >= monthStart) monthCount++;
-    }
-  });
-  return {
-    total: lastRow - 1,
-    today: todayCount,
-    thisWeek: weekCount,
-    thisMonth: monthCount,
-  };
-}
-
-function getRecentRegistrations(limit = 10) {
-  const sh = _sh(CONFIG.REQUEST_SHEET);
-  if (!sh) return [];
-  const lastRow = sh.getLastRow();
-  if (lastRow < 2) return [];
-  const startRow = Math.max(2, lastRow - limit + 1);
-  const numRows = lastRow - startRow + 1;
-  const data = sh.getRange(startRow, 1, numRows, 30).getValues();
-  return data.reverse().map((row) => ({
-    stt: row[0],
-    tenThietBi: row[1],
-    hocPhan: row[10],
-    giangVien: row[15],
-    email: row[16],
-    thoiGian: row[19],
-    idDexuat: row[29],
-  }));
-}
-
-function exportSettingsToJSON() {
-  const settings = getAdminSettings();
-  return JSON.stringify(settings, null, 2);
-}
-
-function importSettingsFromJSON(jsonString) {
-  try {
-    const settings = JSON.parse(jsonString);
-    saveAdminSettings(settings);
-    return { success: true, message: "Đã import cài đặt thành công" };
-  } catch (e) {
-    return { success: false, message: "Lỗi: " + e.message };
-  }
-}
-
-function resetToDefaultSettings() {
-  const props = PropertiesService.getScriptProperties();
-  props.deleteAllProperties();
-  return { success: true, message: "Đã khôi phục cài đặt mặc định" };
-}
-
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
-function adminLogin(id, password) {
-  const props = PropertiesService.getScriptProperties();
-  const storedId = props.getProperty("adminId") || "admin";
-  const storedPassword = props.getProperty("adminPassword") || "eiu@123456";
-
-  if (id === storedId && password === storedPassword) {
-    return { success: true, message: "Đăng nhập thành công" };
-  } else {
-    return { success: false, message: "ID hoặc mật khẩu không đúng" };
-  }
-}
-
-function changeAdminPassword(oldPass, newPass) {
-  const props = PropertiesService.getScriptProperties();
-  const currentPassword = props.getProperty("adminPassword") || "eiu@123456";
-  if (oldPass !== currentPassword) {
-    return { success: false, message: "Mật khẩu cũ không đúng" };
-  }
-  props.setProperty("adminPassword", newPass);
-  return { success: true, message: "Mật khẩu đã được thay đổi" };
-}
-
-function sendAdminPasswordToEmail(email) {
-  const props = PropertiesService.getScriptProperties();
-  const currentPassword = props.getProperty("adminPassword") || "eiu@123456";
-  try {
-    GmailApp.sendEmail(
-      email,
-      "Reset mật khẩu admin",
-      `Mật khẩu hiện tại của bạn là: ${currentPassword}`,
-    );
-    return { success: true, message: "Mật khẩu đã được gửi qua email" };
-  } catch (e) {
-    return { success: false, message: "Không thể gửi email: " + e.message };
-  }
-}

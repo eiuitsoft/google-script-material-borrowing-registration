@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Sync Logs</title>
+    <?!= include('styles'); ?>
+    <style>
+      .logs-wrap {
+        max-width: 1200px;
+        margin: 16px auto;
+        padding: 12px;
+      }
+      .logs-toolbar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      .logs-table-wrap {
+        overflow: auto;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        background: #fff;
+      }
+      .logs-table {
+        width: 100%;
+        min-width: 1100px;
+        border-collapse: collapse;
+      }
+      .logs-table th,
+      .logs-table td {
+        border: 1px solid #e5e7eb;
+        padding: 8px;
+        font-size: 12px;
+        vertical-align: top;
+      }
+      .logs-table th {
+        background: #f8fafc;
+        position: sticky;
+        top: 0;
+        z-index: 1;
+      }
+      .logs-empty {
+        padding: 20px;
+        color: #6b7280;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="logs-wrap">
+      <h2>Sync Logs</h2>
+      <div class="logs-toolbar">
+        <div class="muted">Theo dõi lỗi đồng bộ webhook/API ABP</div>
+        <button id="btnRefreshLogs" class="btn">Làm mới</button>
+      </div>
+      <div id="logsContainer" class="logs-table-wrap">
+        <div class="logs-empty">Đang tải dữ liệu...</div>
+      </div>
+    </div>
+
+    <script>
+      function renderLogs(rows) {
+        const wrap = document.getElementById("logsContainer");
+        if (!Array.isArray(rows) || !rows.length) {
+          wrap.innerHTML = '<div class="logs-empty">Chưa có bản ghi lỗi đồng bộ.</div>';
+          return;
+        }
+        const body = rows
+          .map(
+            (r) => `<tr>
+              <td>${r.timestamp || ""}</td>
+              <td>${r.level || ""}</td>
+              <td>${r.stage || ""}</td>
+              <td>${r.idDexuat || ""}</td>
+              <td>${r.requestId || ""}</td>
+              <td>${r.userEmail || ""}</td>
+              <td>${r.statusCode || ""}</td>
+              <td>${(r.message || "").replace(/</g, "&lt;")}</td>
+              <td>${(r.rawBody || "").replace(/</g, "&lt;")}</td>
+            </tr>`,
+          )
+          .join("");
+        wrap.innerHTML = `<table class="logs-table">
+          <thead>
+            <tr>
+              <th>Timestamp</th>
+              <th>Level</th>
+              <th>Stage</th>
+              <th>IdDexuat</th>
+              <th>RequestId</th>
+              <th>UserEmail</th>
+              <th>StatusCode</th>
+              <th>Message</th>
+              <th>RawBody</th>
+            </tr>
+          </thead>
+          <tbody>${body}</tbody>
+        </table>`;
+      }
+
+      function loadLogs() {
+        google.script.run
+          .withSuccessHandler((rows) => renderLogs(rows))
+          .withFailureHandler((err) => {
+            document.getElementById("logsContainer").innerHTML =
+              '<div class="logs-empty">Không thể tải logs: ' +
+              (err.message || "Lỗi không xác định") +
+              "</div>";
+          })
+          .getRecentSyncLogs(200);
+      }
+
+      document.getElementById("btnRefreshLogs").addEventListener("click", loadLogs);
+      loadLogs();
+    </script>
+  </body>
+</html>

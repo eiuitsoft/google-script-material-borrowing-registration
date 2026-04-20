@@ -17,13 +17,19 @@
     }
   }
   :root {
+    --color-eiu-main: #a68556;
+    --color-eiu-primary: #174168;
+    --color-white: #fff;
+    --color-focused: #169;
+    --color-background-focused: #ffffdd;
+    --color-border-focused: #ffffdd;
     --bg: #fafafa;
     --fg: #111;
     --muted: #6b7280;
-    --brand: #2563eb;
+    --brand: var(--color-eiu-primary);
     --bd: #e5e7eb;
-    --success: #10b981;
-    --error: #ef4444;
+    --success: #2f855a;
+    --error: #c53030;
   }
   * {
     box-sizing: border-box;
@@ -199,6 +205,10 @@
   button:hover {
     background: #f8fafc;
   }
+  button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(17, 102, 153, 0.25);
+  }
   button i {
     margin-right: 6px;
     width: 14px;
@@ -213,7 +223,51 @@
     border: 1px solid var(--brand);
   }
   .btn:hover {
-    background: #1e40af;
+    background: #123754;
+  }
+  #btnReset,
+  #btnSaveDraft,
+  #btnSubmit {
+    min-width: 132px;
+    font-weight: 600;
+  }
+  #btnReset {
+    color: var(--color-eiu-primary);
+    border-color: #cbd5e1;
+    background: #f8fafc;
+  }
+  #btnReset:hover {
+    background: #eef2f7;
+    border-color: #94a3b8;
+  }
+  #btnSaveDraft {
+    color: var(--color-white);
+    border-color: var(--color-eiu-main);
+    background: var(--color-eiu-main);
+  }
+  #btnSaveDraft:hover {
+    background: #927347;
+    border-color: #927347;
+  }
+  #btnSubmit {
+    color: var(--color-white);
+    border-color: var(--color-eiu-primary);
+    background: var(--color-eiu-primary);
+  }
+  #btnSubmit:hover {
+    background: #123754;
+    border-color: #123754;
+  }
+  #btnReset:focus-visible,
+  #btnSaveDraft:focus-visible,
+  #btnSubmit:focus-visible {
+    box-shadow: 0 0 0 3px rgba(17, 102, 153, 0.35);
+    background-image: linear-gradient(
+      to right,
+      var(--color-background-focused),
+      var(--color-background-focused)
+    );
+    border-color: var(--color-border-focused);
   }
   .btn:disabled {
     opacity: 0.5;
